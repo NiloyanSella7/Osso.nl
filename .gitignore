@@ -1,0 +1,32 @@
+# ── Frontend ──────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# ── Python backend ────────────────────────
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+backend/.env
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/instance/
+
+# ── Blockchain ────────────────────────────
+blockchain/node_modules/
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain-types/
+blockchain/.env
+blockchain/coverage/
+blockchain/coverage.json
+
+# ── Algemeen ──────────────────────────────
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
