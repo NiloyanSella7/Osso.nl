@@ -25,6 +25,8 @@ blockchain/coverage/
 blockchain/coverage.json
 
 # ── Algemeen ──────────────────────────────
+/package-lock.json
+/package.json
 .DS_Store
 *.log
 .env
