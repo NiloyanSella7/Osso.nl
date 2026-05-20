@@ -22,6 +22,9 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  ToggleButtonGroup,
+  ToggleButton,
+  CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -32,10 +35,11 @@ import BoltIcon from '@mui/icons-material/Bolt';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockProperties, mockAuctions } from '../lib/mockData';
 import { useAppContext } from '../lib/AppContext';
+import * as api from '../lib/api';
+import type { Property, Auction } from '../types';
 
 function formatDeadline(deadline: string) {
   return new Date(deadline).toLocaleDateString('nl-NL', {
@@ -59,49 +63,97 @@ function timeUntil(deadline: string): string {
 export default function WoningDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, walletConnected, connectWallet } = useAppContext();
+  const { user } = useAppContext();
 
+  const [property, setProperty] = useState<Property | null>(null);
+  const [auction, setAuction] = useState<Auction | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [activeImage, setActiveImage] = useState(0);
   const [bidAmount, setBidAmount] = useState('');
-  const [conditions, setConditions] = useState('');
+  const [financingCondition, setFinancingCondition] = useState<boolean | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [bidSubmitted, setBidSubmitted] = useState(false);
   const [bidStep, setBidStep] = useState(0);
+  const [bidError, setBidError] = useState('');
+  const [alreadyBid, setAlreadyBid] = useState(false);
 
-  const property = mockProperties.find((p) => p.id === Number(id));
-  const auction = mockAuctions.find((a) => a.property_id === Number(id));
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    Promise.all([api.getProperty(Number(id)), api.getAuctions()])
+      .then(async ([prop, auctions]) => {
+        setProperty(prop);
+        const foundAuction = auctions.find((a) => a.property_id === prop.id) ?? null;
+        setAuction(foundAuction);
 
-  if (!property) {
+        // Controleer of de gebruiker al geboden heeft
+        if (foundAuction) {
+          try {
+            const bids = await api.getBids(foundAuction.id);
+            const myWallet = user?.wallet_address?.toLowerCase();
+            if (myWallet && bids.some((b) => b.bidder_wallet.toLowerCase() === myWallet)) {
+              setAlreadyBid(true);
+            }
+          } catch { /* negeer */ }
+        }
+      })
+      .catch(() => setError('Kon woninggegevens niet laden'))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !property) {
     return (
       <Box>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')}>
           Terug
         </Button>
-        <Typography sx={{ mt: 2 }}>Woning niet gevonden.</Typography>
+        <Typography sx={{ mt: 2 }}>{error || 'Woning niet gevonden.'}</Typography>
       </Box>
     );
   }
 
+  const isMakelaar = user?.role === 'makelaar' || user?.role === 'seller' || user?.role === 'admin';
+
   const canBid =
+    !isMakelaar &&
     user?.status === 'active' &&
     user?.idin_verified &&
-    walletConnected &&
     auction?.status === 'open';
 
-  const bidSteps = ['Wallet bevestigen', 'Transactie ondertekenen', 'Bod geregistreerd'];
+  const bidSteps = ['Bod verwerken', 'Bod valideren', 'Bod geregistreerd'];
 
-  const handleBidSubmit = () => {
+  const handleBidSubmit = async () => {
     setConfirmOpen(false);
-    setBidStep(0);
-    const interval = setInterval(() => {
-      setBidStep((s) => {
-        if (s >= 2) {
-          clearInterval(interval);
-          setBidSubmitted(true);
-          return s;
-        }
-        return s + 1;
+    setBidError('');
+    setBidStep(1); // Stap 1: Bod verwerken
+
+    try {
+      await new Promise((r) => setTimeout(r, 600));
+      setBidStep(2); // Stap 2: Blockchain transactie versturen
+
+      await api.placeBid(auction!.id, {
+        amount_usdc: Number(bidAmount),
+        financing_condition: financingCondition!,
       });
-    }, 1200);
+
+      // Stap 3: Geregistreerd op blockchain
+      await new Promise((r) => setTimeout(r, 500));
+      setBidSubmitted(true);
+      setAlreadyBid(true);
+    } catch (e) {
+      setBidError(e instanceof Error ? e.message : 'Bod plaatsen mislukt');
+      setBidStep(0);
+    }
   };
 
   return (
@@ -113,20 +165,62 @@ export default function WoningDetail() {
       <Grid container spacing={3}>
         {/* Left column */}
         <Grid size={{ xs: 12, md: 8 }}>
-          {/* Photo placeholder */}
-          <Box
-            sx={{
-              height: 320,
-              bgcolor: 'primary.light',
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 3,
-            }}
-          >
-            <HomeIcon sx={{ fontSize: 96, color: 'white', opacity: 0.5 }} />
-          </Box>
+          {/* Photo */}
+          {property.images && property.images.length > 0 ? (
+            <Box sx={{ mb: 3 }}>
+              <Box
+                component="img"
+                src={property.images[activeImage]}
+                alt={property.address}
+                sx={{
+                  width: '100%',
+                  height: 320,
+                  objectFit: 'cover',
+                  borderRadius: 2,
+                  display: 'block',
+                }}
+              />
+              {property.images.length > 1 && (
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  {property.images.map((img, idx) => (
+                    <Box
+                      key={idx}
+                      component="img"
+                      src={img}
+                      alt={`foto ${idx + 1}`}
+                      onClick={() => setActiveImage(idx)}
+                      sx={{
+                        width: 80,
+                        height: 56,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        border: activeImage === idx ? '2px solid' : '2px solid transparent',
+                        borderColor: activeImage === idx ? 'primary.main' : 'transparent',
+                        opacity: activeImage === idx ? 1 : 0.65,
+                        transition: 'opacity 0.2s',
+                        '&:hover': { opacity: 1 },
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                height: 320,
+                bgcolor: 'primary.light',
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 3,
+              }}
+            >
+              <HomeIcon sx={{ fontSize: 96, color: 'white', opacity: 0.5 }} />
+            </Box>
+          )}
 
           <Typography variant="h4" gutterBottom>
             {property.address}
@@ -169,8 +263,7 @@ export default function WoningDetail() {
                 Biedproces
               </Typography>
               <Alert severity="info" icon={<VerifiedIcon />} sx={{ mb: 2 }}>
-                Dit biedproces is blockchain-geborgd. Elk bod wordt onwijzigbaar opgeslagen op
-                Polygon PoS. Na afloop zijn alle biedingen geanonimiseerd verifieerbaar.
+                Dit biedproces is transparant en onwijzigbaar. Na afloop zijn alle biedingen verifieerbaar.
               </Alert>
               <List dense>
                 <ListItem>
@@ -179,7 +272,7 @@ export default function WoningDetail() {
                   </ListItemIcon>
                   <ListItemText
                     primary="Automatische deadline-afdwinging"
-                    secondary="Biedingen na de deadline worden technisch geweigerd door het netwerk"
+                    secondary="Biedingen na de deadline worden automatisch geweigerd"
                   />
                 </ListItem>
                 <ListItem>
@@ -187,8 +280,8 @@ export default function WoningDetail() {
                     <CheckCircleIcon color="success" />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Fondsvergrendeling via escrow"
-                    secondary="Uw bod-bedrag wordt in USDC vergrendeld totdat de veiling is afgerond"
+                    primary="Veilige fondsverwerking"
+                    secondary="Uw bodgarantie wordt veilig vastgehouden totdat de biedperiode is afgerond"
                   />
                 </ListItem>
                 <ListItem>
@@ -201,14 +294,16 @@ export default function WoningDetail() {
                   />
                 </ListItem>
               </List>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate(`/biedhistorie/${auction.id}`)}
-                startIcon={<GavelIcon />}
-              >
-                Bekijk biedhistorie
-              </Button>
+              {isMakelaar && (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => navigate(`/biedhistorie/${auction.id}`)}
+                  startIcon={<GavelIcon />}
+                >
+                  Bekijk biedhistorie
+                </Button>
+              )}
             </>
           )}
         </Grid>
@@ -227,15 +322,31 @@ export default function WoningDetail() {
             </CardContent>
           </Card>
 
+          {/* Geen biedproces */}
+          {!auction && !isMakelaar && (
+            <Card sx={{ mb: 2 }}>
+              <CardContent>
+                <Alert severity="info">
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Nog geen actief biedproces
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                    De makelaar heeft nog geen biedperiode gestart voor deze woning. Kom later terug.
+                  </Typography>
+                </Alert>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Auction status card */}
           {auction && (
             <Card sx={{ mb: 2 }}>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="h6">Veiling</Typography>
+                  <Typography variant="h6">Biedperiode</Typography>
                   <Chip
-                    label={auction.status === 'open' ? 'Open' : 'Gesloten'}
-                    color={auction.status === 'open' ? 'success' : 'default'}
+                    label={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'Open' : 'Gesloten'}
+                    color={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'success' : 'default'}
                     size="small"
                   />
                 </Box>
@@ -255,7 +366,7 @@ export default function WoningDetail() {
                   </Typography>
                 </Box>
 
-                {auction.status === 'open' && (
+                {auction.status === 'open' && new Date(auction.deadline) > new Date() && (
                   <>
                     <LinearProgress
                       variant="determinate"
@@ -271,8 +382,24 @@ export default function WoningDetail() {
             </Card>
           )}
 
-          {/* Bid form */}
-          {auction?.status === 'open' && (
+          {/* Al geboden melding */}
+          {auction?.status === 'open' && !isMakelaar && alreadyBid && (
+            <Card sx={{ mb: 2 }}>
+              <CardContent>
+                <Alert severity="success" icon={<VerifiedIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    U heeft al een bod uitgebracht
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                    Per bieder is één bod toegestaan. Uw bod is geregistreerd op de blockchain en kan niet worden gewijzigd.
+                  </Typography>
+                </Alert>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bid form — niet zichtbaar voor makelaars of als al geboden */}
+          {auction?.status === 'open' && !isMakelaar && !alreadyBid && (
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -285,11 +412,14 @@ export default function WoningDetail() {
                       Bod succesvol geregistreerd!
                     </Typography>
                     <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-                      Uw bod is onwijzigbaar vastgelegd op Polygon PoS.
+                      Bod: <strong>€ {Number(bidAmount).toLocaleString('nl-NL')}</strong>
+                      {' · '}Voorbehoud financiering:{' '}
+                      <strong>{financingCondition ? 'Ja' : 'Nee'}</strong>
                     </Typography>
                   </Alert>
-                ) : bidStep > 0 && !bidSubmitted ? (
+                ) : bidStep > 0 ? (
                   <Box>
+                    {bidError && <Alert severity="error" sx={{ mb: 2 }}>{bidError}</Alert>}
                     <Stepper activeStep={bidStep} orientation="vertical">
                       {bidSteps.map((label) => (
                         <Step key={label}>
@@ -300,22 +430,10 @@ export default function WoningDetail() {
                   </Box>
                 ) : !canBid ? (
                   <Box>
+                    {bidError && <Alert severity="error" sx={{ mb: 1 }}>{bidError}</Alert>}
                     {!user?.idin_verified && (
                       <Alert severity="warning" sx={{ mb: 1 }}>
                         Doorloop eerst uw iDIN-verificatie om te kunnen bieden.
-                      </Alert>
-                    )}
-                    {!walletConnected && (
-                      <Alert
-                        severity="warning"
-                        sx={{ mb: 1 }}
-                        action={
-                          <Button size="small" onClick={connectWallet}>
-                            Verbinden
-                          </Button>
-                        }
-                      >
-                        Verbind uw wallet om te bieden.
                       </Alert>
                     )}
                     {user?.status === 'invited' && (
@@ -326,8 +444,9 @@ export default function WoningDetail() {
                   </Box>
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {bidError && <Alert severity="error">{bidError}</Alert>}
                     <TextField
-                      label="Bod-bedrag (USDC)"
+                      label="Bod-bedrag (€)"
                       type="number"
                       value={bidAmount}
                       onChange={(e) => setBidAmount(e.target.value)}
@@ -336,27 +455,38 @@ export default function WoningDetail() {
                       slotProps={{ htmlInput: { min: 0 } }}
                       helperText={`Vraagprijs: € ${property.asking_price.toLocaleString('nl-NL')}`}
                     />
-                    <TextField
-                      label="Voorwaarden (optioneel)"
-                      value={conditions}
-                      onChange={(e) => setConditions(e.target.value)}
-                      fullWidth
-                      size="small"
-                      multiline
-                      rows={2}
-                      placeholder="Bijv. voorbehoud van financiering"
-                    />
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        Voorbehoud van financiering
+                      </Typography>
+                      <ToggleButtonGroup
+                        value={financingCondition}
+                        exclusive
+                        onChange={(_, val) => { if (val !== null) setFinancingCondition(val); }}
+                        size="small"
+                        fullWidth
+                      >
+                        <ToggleButton value={true} color="primary">
+                          Ja
+                        </ToggleButton>
+                        <ToggleButton value={false} color="primary">
+                          Nee
+                        </ToggleButton>
+                      </ToggleButtonGroup>
+                      <Typography variant="caption" color="text.secondary">
+                        Kies "Ja" als uw bod afhankelijk is van het verkrijgen van een hypotheek.
+                      </Typography>
+                    </Box>
                     <Alert severity="info" icon={<WarningIcon />}>
                       <Typography variant="caption">
-                        Uw wallet toont een bevestigingsscherm. Het bod-bedrag wordt in USDC
-                        vergrendeld via BidEscrow. Uw privésleutel verlaat uw apparaat niet.
+                        Uw bod wordt veilig verwerkt en geregistreerd. U ontvangt een bevestiging na indiening.
                       </Typography>
                     </Alert>
                     <Button
                       variant="contained"
                       size="large"
                       fullWidth
-                      disabled={!bidAmount || Number(bidAmount) <= 0}
+                      disabled={!bidAmount || Number(bidAmount) <= 0 || financingCondition === null}
                       onClick={() => setConfirmOpen(true)}
                       startIcon={<GavelIcon />}
                     >
@@ -376,18 +506,27 @@ export default function WoningDetail() {
         <DialogContent>
           <DialogContentText>
             U staat op het punt een bod van{' '}
-            <strong>€ {Number(bidAmount).toLocaleString('nl-NL')} USDC</strong> uit te brengen op{' '}
+            <strong>€ {Number(bidAmount).toLocaleString('nl-NL')}</strong> uit te brengen op{' '}
             <strong>{property.address}</strong>.
           </DialogContentText>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="body2" color="text.secondary">Voorbehoud van financiering</Typography>
+              <Chip
+                label={financingCondition ? 'Ja' : 'Nee'}
+                color={financingCondition ? 'warning' : 'success'}
+                size="small"
+              />
+            </Box>
+          </Box>
           <Alert severity="warning" sx={{ mt: 2 }}>
-            Het bod-bedrag wordt direct vergrendeld via het BidEscrow smart contract op Polygon PoS.
-            Dit kan niet ongedaan worden gemaakt.
+            Eenmaal ingediend kan uw bod niet worden ingetrokken zolang de biedperiode loopt.
           </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Annuleren</Button>
           <Button variant="contained" onClick={handleBidSubmit}>
-            Bevestigen &amp; ondertekenen
+            Bod bevestigen
           </Button>
         </DialogActions>
       </Dialog>

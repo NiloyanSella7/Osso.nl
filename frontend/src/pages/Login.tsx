@@ -7,10 +7,9 @@ import {
   Typography,
   Checkbox,
   FormControlLabel,
-  Link,
   Divider,
+  Alert,
 } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonIcon from '@mui/icons-material/Person';
 import BusinessIcon from '@mui/icons-material/Business';
 import { useState } from 'react';
@@ -21,16 +20,26 @@ type Role = 'bidder' | 'makelaar';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAppContext();
+  const { login, user } = useAppContext();
   const [role, setRole] = useState<Role>('bidder');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    const addr = email || (role === 'makelaar' ? 'makelaar@osso.nl' : 'koper@osso.nl');
-    login(addr, role);
-    navigate(role === 'makelaar' ? '/' : '/onboarding');
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await login(email, password);
+      // Navigeer op basis van status na login (AppContext haalt user op)
+      navigate('/');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Inloggen mislukt');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -45,84 +54,48 @@ export default function Login() {
       <Box
         sx={{
           flex: '0 0 55%',
-          background: 'linear-gradient(145deg, #0D3B5E 0%, #1B6CA8 55%, #2196F3 100%)',
           display: { xs: 'none', md: 'flex' },
           flexDirection: 'column',
           justifyContent: 'center',
           px: 10,
           position: 'relative',
           overflow: 'hidden',
+          backgroundImage: 'url("https://cdn.prod.website-files.com/648819830dc1a2c1c574b1b6/6745dd853a91bea8252e402c_Header%20WinWin%20woning%20(2).webp")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       >
-        <Box sx={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', top: -100, right: -150 }} />
-        <Box sx={{ position: 'absolute', width: 700, height: 700, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.05)', bottom: -200, left: -200 }} />
-
-        <Box sx={{ mb: 6 }}>
+        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(145deg, rgba(13,59,94,0.82) 0%, rgba(27,108,168,0.72) 55%, rgba(33,150,243,0.65) 100%)' }} />
+        <Box sx={{ position: 'relative', zIndex: 1, mb: 6 }}>
           <Box component="img" src="/osso-logo.png" alt="Osso.nl" sx={{ height: 80, width: 'auto', filter: 'brightness(0) invert(1)' }} />
         </Box>
-
-        <Typography variant="h3" sx={{ fontWeight: 700, color: 'white', lineHeight: 1.2, mb: 3, fontSize: '2.4rem' }}>
-          Transparant bieden
-          <br />
-          op uw droomhuis
+        <Typography variant="h3" sx={{ position: 'relative', zIndex: 1, fontWeight: 700, color: 'white', lineHeight: 1.2, mb: 3, fontSize: '2.4rem' }}>
+          Transparant bieden<br />op uw droomhuis
         </Typography>
-
-        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.75)', mb: 5, maxWidth: 420, lineHeight: 1.7 }}>
-          Elk bod wordt onwijzigbaar vastgelegd op de blockchain. Eerlijk, controleerbaar en
-          manipulatiebestendig — voor koper en verkoper.
+        <Typography variant="body1" sx={{ position: 'relative', zIndex: 1, color: 'rgba(255,255,255,0.85)', mb: 5, maxWidth: 420, lineHeight: 1.7 }}>
+          Elk bod wordt onwijzigbaar vastgelegd. Eerlijk, controleerbaar en transparant — voor koper en verkoper.
         </Typography>
-
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.15)', mb: 4, maxWidth: 400 }} />
-
-        <Box sx={{ display: 'flex', gap: 4 }}>
+        <Divider sx={{ position: 'relative', zIndex: 1, borderColor: 'rgba(255,255,255,0.2)', mb: 4, maxWidth: 400 }} />
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', gap: 4 }}>
           {[
-            { label: 'Blockchain-geborgd', sub: 'Polygon PoS' },
+            { label: 'Onwijzigbaar', sub: 'Vastgelegd en verifieerbaar' },
             { label: 'iDIN-verificatie', sub: 'Via uw bank' },
             { label: '100% transparant', sub: 'Publiek verifieerbaar' },
           ].map((item) => (
             <Box key={item.label}>
               <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.85rem' }}>{item.label}</Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem' }}>{item.sub}</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{item.sub}</Typography>
             </Box>
           ))}
         </Box>
-
-        <Box
-          sx={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: 120,
-            background: 'rgba(255,255,255,0.04)',
-            clipPath: 'polygon(0 80%, 8% 60%, 15% 60%, 15% 30%, 22% 20%, 29% 30%, 29% 60%, 38% 60%, 45% 40%, 52% 40%, 52% 15%, 60% 5%, 68% 15%, 68% 40%, 75% 40%, 80% 55%, 87% 55%, 87% 30%, 94% 22%, 100% 30%, 100% 80%, 100% 100%, 0 100%)',
-          }}
-        />
       </Box>
 
       {/* Right: login form */}
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#F0F4F8',
-          p: 4,
-        }}
-      >
-        <Card
-          elevation={0}
-          sx={{ maxWidth: 420, width: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
-        >
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#F0F4F8', p: 4 }}>
+        <Card elevation={0} sx={{ maxWidth: 420, width: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <CardContent sx={{ p: 5 }}>
             {/* Role toggle */}
-            <Box
-              sx={{
-                display: 'flex',
-                bgcolor: 'grey.100',
-                borderRadius: 2,
-                p: 0.5,
-                mb: 4,
-                gap: 0.5,
-              }}
-            >
+            <Box sx={{ display: 'flex', bgcolor: 'grey.100', borderRadius: 2, p: 0.5, mb: 4, gap: 0.5 }}>
               {([
                 { value: 'bidder', label: 'Koper', icon: <PersonIcon sx={{ fontSize: 16 }} /> },
                 { value: 'makelaar', label: 'Makelaar', icon: <BusinessIcon sx={{ fontSize: 16 }} /> },
@@ -134,17 +107,11 @@ export default function Login() {
                   fullWidth
                   disableElevation
                   sx={{
-                    py: 1,
-                    borderRadius: 1.5,
-                    fontWeight: 700,
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s',
+                    py: 1, borderRadius: 1.5, fontWeight: 700, fontSize: '0.875rem', transition: 'all 0.2s',
                     bgcolor: role === opt.value ? 'white' : 'transparent',
                     color: role === opt.value ? 'primary.main' : 'text.secondary',
                     boxShadow: role === opt.value ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-                    '&:hover': {
-                      bgcolor: role === opt.value ? 'white' : 'grey.200',
-                    },
+                    '&:hover': { bgcolor: role === opt.value ? 'white' : 'grey.200' },
                   }}
                 >
                   {opt.label}
@@ -152,27 +119,23 @@ export default function Login() {
               ))}
             </Box>
 
-            {/* Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.75 }}>
-              <Box
-                sx={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  bgcolor: isMakelaar ? 'secondary.dark' : 'primary.main',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background-color 0.2s',
-                }}
-              >
-                <LockOutlinedIcon sx={{ color: 'white', fontSize: 18 }} />
-              </Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: isMakelaar ? 'secondary.dark' : 'primary.dark', transition: 'color 0.2s' }}>
+            {/* Logo + header */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+              <Box component="img" src="/osso-logo.png" alt="Osso.nl" sx={{ height: 72, width: 'auto', mb: 2 }} />
+              <Typography variant="h5" sx={{ fontWeight: 700, color: isMakelaar ? 'secondary.dark' : 'primary.dark' }}>
                 Welkom bij Osso.nl
               </Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 4, ml: 6.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
               {isMakelaar ? 'Log in op uw makelaarsaccount' : 'Log in op uw kopersaccount'}
             </Typography>
 
-            {/* Fields */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <TextField
                 label="E-mailadres"
@@ -199,9 +162,6 @@ export default function Login() {
                   control={<Checkbox size="small" checked={remember} onChange={(e) => setRemember(e.target.checked)} />}
                   label={<Typography variant="body2" color="text.secondary">Ingelogd blijven</Typography>}
                 />
-                <Link href="#" variant="body2" underline="hover" color="primary">
-                  Wachtwoord vergeten?
-                </Link>
               </Box>
 
               <Button
@@ -209,6 +169,7 @@ export default function Login() {
                 size="large"
                 fullWidth
                 onClick={handleLogin}
+                disabled={loading || !email || !password}
                 sx={{
                   mt: 1, py: 1.5, fontWeight: 700, fontSize: '1rem', borderRadius: 2,
                   background: isMakelaar
@@ -221,19 +182,27 @@ export default function Login() {
                   },
                 }}
               >
-                {isMakelaar ? 'INLOGGEN ALS MAKELAAR' : 'INLOGGEN ALS KOPER'}
+                {loading ? 'Inloggen...' : isMakelaar ? 'INLOGGEN ALS MAKELAAR' : 'INLOGGEN ALS KOPER'}
               </Button>
             </Box>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" color="text.disabled">DEMO</Typography>
-            </Divider>
-
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
-              {isMakelaar
-                ? <>Als makelaar gaat u direct naar het <strong>verkoperspaneel</strong>.</>
-                : <>Als koper doorloopt u eerst de <strong>iDIN-verificatie</strong>.</>}
-            </Typography>
+            {isMakelaar && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Nog geen account?{' '}
+                    <Box
+                      component="span"
+                      onClick={() => navigate('/register')}
+                      sx={{ color: 'primary.main', fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                      Makelaar registreren →
+                    </Box>
+                  </Typography>
+                </Box>
+              </>
+            )}
           </CardContent>
         </Card>
       </Box>

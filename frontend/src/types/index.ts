@@ -41,6 +41,7 @@ export interface Property {
   rooms?: number;
   area_m2?: number;
   energy_label?: string;
+  makelaar?: Makelaar | null;
 }
 
 export interface Auction {
@@ -62,4 +63,8 @@ export interface Bid {
   tx_hash: string;
   block_number: number;
   indexed_at: string;
+  bidder_name?: string;
+  bidder_email?: string;
+  bidder_phone?: string;
+  financing_condition?: boolean;
 }

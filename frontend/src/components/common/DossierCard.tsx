@@ -63,14 +63,24 @@ export default function DossierCard({ property, auction, makelaar }: Props) {
         sx={{
           width: { xs: 120, sm: 180 },
           flexShrink: 0,
-          background: gradient,
+          background: property.images?.[0] ? 'none' : gradient,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        <HomeIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)' }} />
+        {property.images?.[0] ? (
+          <Box
+            component="img"
+            src={property.images[0]}
+            alt={property.address}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <HomeIcon sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)' }} />
+        )}
         {auction && (
           <Chip
             label={isOpen ? 'Koop dossier' : 'Gesloten'}
@@ -82,7 +92,7 @@ export default function DossierCard({ property, auction, makelaar }: Props) {
               fontWeight: 700,
               fontSize: '0.65rem',
               height: 20,
-              bgcolor: 'rgba(255,255,255,0.2)',
+              bgcolor: 'rgba(0,0,0,0.45)',
               color: 'white',
               backdropFilter: 'blur(4px)',
               border: '1px solid rgba(255,255,255,0.3)',

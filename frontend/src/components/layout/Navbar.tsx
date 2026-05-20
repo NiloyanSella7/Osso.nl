@@ -16,6 +16,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../lib/AppContext';
@@ -31,16 +32,22 @@ const SELLER_LINK = {
   icon: <DashboardIcon sx={{ fontSize: 16 }} />,
 };
 
+const BLOCKCHAIN_LINK = {
+  label: 'Blockchain',
+  path: '/blockchain',
+  icon: <MonitorHeartIcon sx={{ fontSize: 16 }} />,
+};
+
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isLoggedIn } = useAppContext();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const links =
-    user?.role === 'seller' || user?.role === 'makelaar' || user?.role === 'admin'
-      ? [...NAV_LINKS, SELLER_LINK]
-      : NAV_LINKS;
+  const isMakelaar = user?.role === 'seller' || user?.role === 'makelaar' || user?.role === 'admin';
+  const links = isMakelaar
+    ? [...NAV_LINKS, SELLER_LINK, BLOCKCHAIN_LINK]
+    : NAV_LINKS;
 
   const handleLogout = () => {
     setAnchorEl(null);

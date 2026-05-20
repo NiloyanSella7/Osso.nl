@@ -76,25 +76,35 @@ export default function PropertyCard({ property, auction }: Props) {
       <Box
         sx={{
           height: 200,
-          background: gradient,
+          background: property.images?.[0] ? 'none' : gradient,
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
+          overflow: 'hidden',
         }}
       >
-        {/* Subtle grid pattern overlay */}
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage:
-              'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px)',
-          }}
-        />
-
-        <HomeIcon sx={{ fontSize: 72, color: 'rgba(255,255,255,0.18)' }} />
+        {property.images?.[0] ? (
+          <Box
+            component="img"
+            src={property.images[0]}
+            alt={property.address}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <>
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage:
+                  'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px)',
+              }}
+            />
+            <HomeIcon sx={{ fontSize: 72, color: 'rgba(255,255,255,0.18)' }} />
+          </>
+        )}
 
         {/* Top badges */}
         <Box
