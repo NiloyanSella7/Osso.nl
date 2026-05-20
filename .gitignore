@@ -24,6 +24,9 @@ blockchain/.env
 blockchain/coverage/
 blockchain/coverage.json
 
+# ── Claude Code ───────────────────────────
+.claude/
+
 # ── Algemeen ──────────────────────────────
 /package-lock.json
 /package.json
