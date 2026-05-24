@@ -10,8 +10,13 @@ interface CountdownResult {
   urgent: boolean;
 }
 
+function parseUTC(dateStr: string): Date {
+  if (dateStr.endsWith('Z') || dateStr.includes('+')) return new Date(dateStr);
+  return new Date(dateStr + 'Z');
+}
+
 function compute(deadline: string): CountdownResult {
-  const diff = new Date(deadline).getTime() - Date.now();
+  const diff = parseUTC(deadline).getTime() - Date.now();
   if (diff <= 0) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true, label: 'Gesloten', urgent: false };
   }

@@ -287,13 +287,11 @@ export default function BlockchainMonitor() {
                         </Tooltip>
                       </TableCell>
 
-                      {/* Tijdstip — tooltip met exacte tijd, tekst relatief */}
+                      {/* Tijdstip — exacte datum en tijd */}
                       <TableCell sx={{ py: 1.5 }}>
-                        <Tooltip title={formatTime(entry.indexed_at)} placement="top">
-                          <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: '0.75rem', cursor: 'default' }}>
-                            {timeAgo(entry.indexed_at)}
-                          </Typography>
-                        </Tooltip>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                          {formatTime(entry.indexed_at)}
+                        </Typography>
                       </TableCell>
                     </TableRow>
                   );
