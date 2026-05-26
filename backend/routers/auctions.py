@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/auctions", tags=["auctions"])
 
 def _auction_out(auction: Auction, db: Session | None = None) -> AuctionOut:
     # Bereken de effectieve status op basis van de deadline
-    deadline_passed = auction.deadline.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+    deadline_passed = auction.deadline < datetime.now()
     effective_status = "closed" if (auction.status == "open" and deadline_passed) else auction.status
 
     # Sla de gesloten status op in de DB als dat nog niet het geval is
@@ -137,7 +137,7 @@ def close_auction(
     if auction.status != "open":
         raise HTTPException(status_code=400, detail="Veiling is al gesloten")
 
-    if datetime.now(timezone.utc) < auction.deadline.replace(tzinfo=timezone.utc):
+    if datetime.now() < auction.deadline:
         raise HTTPException(status_code=400, detail="Deadline is nog niet verstreken")
 
     winner_wallet: str | None = None

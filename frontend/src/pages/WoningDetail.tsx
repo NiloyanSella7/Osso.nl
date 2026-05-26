@@ -41,14 +41,8 @@ import { useAppContext } from '../lib/AppContext';
 import * as api from '../lib/api';
 import type { Property, Auction } from '../types';
 
-// Zorg dat UTC timestamps correct geïnterpreteerd worden (geen Z = UTC toevoegen)
-function parseUTC(dateStr: string): Date {
-  if (dateStr.endsWith('Z') || dateStr.includes('+')) return new Date(dateStr);
-  return new Date(dateStr + 'Z');
-}
-
 function formatDeadline(deadline: string) {
-  return parseUTC(deadline).toLocaleDateString('nl-NL', {
+  return new Date(deadline).toLocaleDateString('nl-NL', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -58,7 +52,7 @@ function formatDeadline(deadline: string) {
 }
 
 function timeUntil(deadline: string): string {
-  const diff = parseUTC(deadline).getTime() - Date.now();
+  const diff = new Date(deadline).getTime() - Date.now();
   if (diff <= 0) return 'Verlopen';
   const days = Math.floor(diff / 86400000);
   const hours = Math.floor((diff % 86400000) / 3600000);
@@ -351,8 +345,8 @@ export default function WoningDetail() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="h6">Biedperiode</Typography>
                   <Chip
-                    label={auction.status === 'open' && parseUTC(auction.deadline) > new Date() ? 'Open' : 'Gesloten'}
-                    color={auction.status === 'open' && parseUTC(auction.deadline) > new Date() ? 'success' : 'default'}
+                    label={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'Open' : 'Gesloten'}
+                    color={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'success' : 'default'}
                     size="small"
                   />
                 </Box>
@@ -372,7 +366,7 @@ export default function WoningDetail() {
                   </Typography>
                 </Box>
 
-                {auction.status === 'open' && parseUTC(auction.deadline) > new Date() && (
+                {auction.status === 'open' && new Date(auction.deadline) > new Date() && (
                   <>
                     <LinearProgress
                       variant="determinate"

@@ -179,8 +179,8 @@ export default function Verkoperspaneel() {
     try {
       const created = await api.createAuction({
         property_id: Number(auctionForm.property_id),
-        start_date: new Date(auctionForm.start_date).toISOString(),
-        deadline: new Date(auctionForm.deadline).toISOString(),
+        start_date: auctionForm.start_date + ':00',
+        deadline: auctionForm.deadline + ':00',
       });
       setAuctions((prev) => [...prev, created]);
       setAuctionForm(emptyAuction);

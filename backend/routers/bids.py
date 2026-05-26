@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -25,7 +25,7 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
         .all()
     )
 
-    deadline_passed = datetime.now(timezone.utc) > auction.deadline.replace(tzinfo=timezone.utc)
+    deadline_passed = datetime.now() > auction.deadline
 
     if deadline_passed and indexed:
         # Na deadline: lees bedragen van blockchain en koppel op volgorde
@@ -62,7 +62,7 @@ def place_bid(
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
     if auction.status != "open":
         raise HTTPException(status_code=400, detail="Biedperiode is gesloten")
-    if datetime.now(timezone.utc) > auction.deadline.replace(tzinfo=timezone.utc):
+    if datetime.now() > auction.deadline:
         raise HTTPException(status_code=400, detail="De bieddeadline is verstreken")
 
     if not current_user.idin_verified:
