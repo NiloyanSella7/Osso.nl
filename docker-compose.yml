@@ -18,6 +18,8 @@ services:
     build: ./blockchain
     ports:
       - "8545:8545"
+    volumes:
+      - blockchain_data:/data
     healthcheck:
       test: ["CMD", "wget", "-qO-", "--post-data", "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}", "--header", "Content-Type: application/json", "http://localhost:8545"]
       interval: 5s
@@ -54,3 +56,4 @@ services:
 
 volumes:
   mysql_data:
+  blockchain_data:

@@ -28,13 +28,19 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     deadline_passed = datetime.now() > auction.deadline
 
     if deadline_passed and indexed:
-        # Na deadline: lees bedragen van blockchain en koppel op volgorde
+        # Na deadline: haal bedragen op van blockchain en koppel op wallet adres
         try:
             from blockchain.client import blockchain_client
             chain_bids = blockchain_client.get_registry_bids(auction_id)
-            for i, bid in enumerate(indexed):
-                if i < len(chain_bids):
-                    bid.amount_usdc = chain_bids[i]["amount_eur"]
+            # Maak een dict van wallet -> bedrag voor snelle lookup
+            amount_by_wallet = {
+                b["bidder_wallet"].lower(): b["amount_eur"]
+                for b in chain_bids
+            }
+            for bid in indexed:
+                wallet = (bid.bidder_wallet or "").lower()
+                if wallet in amount_by_wallet:
+                    bid.amount_usdc = amount_by_wallet[wallet]
         except Exception:
             pass  # Blockchain niet beschikbaar — bedragen blijven verborgen
 
