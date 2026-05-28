@@ -57,6 +57,8 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 const emptyProperty = {
   address: '',
+  postal_code: '',
+  city: '',
   description: '',
   asking_price: '',
   rooms: '',
@@ -155,6 +157,8 @@ export default function Verkoperspaneel() {
 
       const created = await api.createProperty({
         address: propertyForm.address,
+        postal_code: propertyForm.postal_code || undefined,
+        city: propertyForm.city || undefined,
         description: propertyForm.description || undefined,
         asking_price: Number(propertyForm.asking_price),
         rooms: propertyForm.rooms ? Number(propertyForm.rooms) : undefined,
@@ -384,8 +388,26 @@ export default function Verkoperspaneel() {
                   onChange={(e) => setPropertyForm({ ...propertyForm, address: e.target.value })}
                   fullWidth
                   size="small"
-                  placeholder="Keizersgracht 123, Amsterdam"
+                  placeholder="Keizersgracht 123"
                 />
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    label="Postcode"
+                    value={propertyForm.postal_code}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, postal_code: e.target.value })}
+                    size="small"
+                    placeholder="1234 AB"
+                    sx={{ width: '40%' }}
+                  />
+                  <TextField
+                    label="Plaatsnaam"
+                    value={propertyForm.city}
+                    onChange={(e) => setPropertyForm({ ...propertyForm, city: e.target.value })}
+                    size="small"
+                    placeholder="Amsterdam"
+                    sx={{ flex: 1 }}
+                  />
+                </Box>
                 <TextField
                   label="Omschrijving"
                   value={propertyForm.description}
@@ -512,9 +534,9 @@ export default function Verkoperspaneel() {
                   }
                   fullWidth
                   size="small"
-                  slotProps={{ select: { native: true } }}
+                  slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
                 >
-                  <option value="">Selecteer een woning...</option>
+                  <option value="" disabled>Selecteer een woning...</option>
                   {properties.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.address}
