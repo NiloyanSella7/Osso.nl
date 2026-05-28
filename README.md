@@ -94,9 +94,10 @@ Dit commando:
 5. Nodig bieders uit door hun e-mailadres toe te voegen
 
 ### Als bieder
-1. Registreer via http://localhost:5173/register
-2. Doorloop de iDIN-verificatie (mock in lokale omgeving)
-3. Breng een bod uit — dit wordt via de blockchain vastgelegd
+1. Ontvang een uitnodiging van de makelaar
+2. Log in via de link in de uitnodiging
+3. Doorloop de iDIN-verificatie (mock in lokale omgeving)
+4. Breng een bod uit op de toegewezen woning — dit wordt via de blockchain vastgelegd
 
 ---
 
