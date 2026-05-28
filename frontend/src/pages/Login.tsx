@@ -20,7 +20,7 @@ type Role = 'bidder' | 'makelaar';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, user } = useAppContext();
+  const { login } = useAppContext();
   const [role, setRole] = useState<Role>('bidder');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

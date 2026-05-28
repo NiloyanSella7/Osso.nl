@@ -1,6 +1,6 @@
 import {
   Box, Typography, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Tooltip, Alert, MenuItem, Select, FormControl, InputLabel,
+  TableHead, TableRow, Tooltip, Alert,
 } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -23,13 +23,6 @@ function parseUTC(dateStr: string): Date {
   return new Date(dateStr + 'Z'); // Voeg Z toe zodat browser het als UTC leest
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Math.floor((Date.now() - parseUTC(dateStr).getTime()) / 1000);
-  if (diff < 5) return 'zonet';
-  if (diff < 60) return `${diff}s geleden`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m geleden`;
-  return `${Math.floor(diff / 3600)}u geleden`;
-}
 
 function formatTime(dateStr: string): string {
   return parseUTC(dateStr).toLocaleString('nl-NL', {

@@ -125,7 +125,7 @@ export default function Verkoperspaneel() {
     );
   }
 
-  if (user.status === 'pending_nvm') {
+  if (user.status === 'invited') {
     return (
       <Box>
         <Typography variant="h4" gutterBottom>Verkoperspaneel</Typography>

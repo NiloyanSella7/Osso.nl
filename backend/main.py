@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
+from database import Base, engine
 from routers import auth, auctions, bids, blockchain, makelaars, properties, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -38,8 +39,27 @@ app.include_router(blockchain.router)
 
 @app.on_event("startup")
 async def startup():
-    # Start event indexer als achtergrondtaak
+    import models  # noqa: F401 — registreert alle modellen bij Base
+    Base.metadata.create_all(bind=engine)
+    _run_seed_if_empty()
     asyncio.create_task(_start_indexer())
+
+
+def _run_seed_if_empty():
+    from sqlalchemy import text
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        count = db.execute(text("SELECT COUNT(*) FROM users")).scalar()
+        if count == 0:
+            logger.info("Lege database gedetecteerd — seed wordt uitgevoerd...")
+            from seed import run_seed
+            run_seed()
+            logger.info("Seed voltooid.")
+    except Exception as e:
+        logger.warning(f"Seed overgeslagen: {e}")
+    finally:
+        db.close()
 
 
 async def _start_indexer():
