@@ -1,6 +1,6 @@
 # Osso.nl — Transparant woningbiedplatform
 
-Osso.nl is een woningbiedplatform waarbij alle biedingen via de blockchain vastgelegd worden. Makelaars kunnen woningen registreren en veilingen starten. Bieders kunnen transparant en onveranderbaar bieden via een smart contract op de blockchain.
+Osso.nl is een woningbiedplatform waarbij alle biedingen via de blockchain worden vastgelegd. Makelaars kunnen woningen registreren en veilingen starten. Bieders kunnen transparant en onveranderbaar bieden via een smart contract op de blockchain.
 
 ## Tech stack
 
@@ -9,68 +9,110 @@ Osso.nl is een woningbiedplatform waarbij alle biedingen via de blockchain vastg
 | Frontend | React + Vite + TypeScript + MUI |
 | Backend | FastAPI (Python 3.13) |
 | Database | MySQL 8 |
-| Blockchain | Hardhat + Solidity (lokaal) / Polygon (productie) |
+| Blockchain | Hardhat + Solidity (lokaal) |
 | Containerisatie | Docker + Docker Compose |
 
 ---
 
 ## Vereisten
 
-Zorg dat het volgende geïnstalleerd is voordat je begint:
+Je hebt alleen **Git** en **Docker Desktop** nodig. Geen Python, Node.js of andere tools hoeven lokaal geïnstalleerd te zijn.
 
-### 1. Git
-Download via [git-scm.com](https://git-scm.com/downloads) of controleer of het al geïnstalleerd is:
-```bash
-git --version
+---
+
+## Installatie op Windows (eerste keer)
+
+### Stap 1 — Git installeren
+
+Ga naar [git-scm.com/downloads](https://git-scm.com/downloads) en download de Windows-installer.
+
+Installeer met de standaardinstellingen. Controleer daarna in een nieuw terminalvenster:
+
 ```
-
-### 2. Docker Desktop
-Docker Desktop bevat zowel Docker als Docker Compose.
-
-- **Mac**: [Download Docker Desktop voor Mac](https://www.docker.com/products/docker-desktop/)
-- **Windows**: [Download Docker Desktop voor Windows](https://www.docker.com/products/docker-desktop/)
-- **Linux**: Volg de [officiële instructies](https://docs.docker.com/engine/install/)
-
-Na installatie: open Docker Desktop en wacht tot de engine groen is (running).
-
-Controleer de installatie:
-```bash
-docker --version
-docker compose version
+git --version
 ```
 
 ---
 
-## Installatie & opstarten
+### Stap 2 — Docker Desktop installeren
 
-### Stap 1 — Repository clonen
+1. Ga naar [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+2. Klik op **Download for Windows**
+3. Voer de installer uit (`Docker Desktop Installer.exe`)
+4. Tijdens de installatie: laat **"Use WSL 2 instead of Hyper-V"** aangevinkt staan (aanbevolen)
+5. Start je pc opnieuw op als dat gevraagd wordt
 
-```bash
-git clone https://github.com/jouw-gebruikersnaam/osso.nl.git
+**WSL 2 instellen (alleen als dat gevraagd wordt):**
+
+Als Docker meldt dat WSL 2 niet geïnstalleerd is, open dan PowerShell als Administrator en voer uit:
+
+```powershell
+wsl --install
+```
+
+Herstart daarna je pc en open Docker Desktop opnieuw.
+
+**Controleer of Docker werkt:**
+
+Open een nieuw terminalvenster (Command Prompt of PowerShell) en typ:
+
+```
+docker --version
+docker compose version
+```
+
+Beide commando's moeten een versienummer teruggeven. Zorg dat het Docker-icoon in de taakbalk **groen** is (Engine running) voordat je verder gaat.
+
+---
+
+### Stap 3 — Repository clonen
+
+Open **Command Prompt** of **PowerShell** en voer uit:
+
+```
+git clone https://github.com/NiloyanSellathurai/osso.nl.git
 cd osso.nl
 ```
 
-### Stap 2 — Opstarten met Docker
+> Vervang de URL hierboven door de werkelijke GitHub-URL als die anders is.
 
-```bash
+---
+
+### Stap 4 — Applicatie starten
+
+```
 docker compose up --build
 ```
 
-Dit commando:
-1. Bouwt alle Docker images (frontend, backend, blockchain)
-2. Start een lokale MySQL database
-3. Start een lokale Hardhat blockchain node en deployt de smart contracts
-4. Maakt automatisch de database tabellen aan
-5. Vult de database met twee demo-gebruikers
+Dit commando doet automatisch het volgende:
 
-> De eerste keer duurt het 2–5 minuten omdat alle dependencies gedownload worden.
+1. Downloadt alle benodigde images (Node, Python, MySQL, Nginx)
+2. Bouwt de frontend, backend en blockchain containers
+3. Start een lokale MySQL database
+4. Start een lokale Hardhat blockchain node en deployt het smart contract
+5. Maakt de databasetabellen aan
+6. Vult de database met twee demo-makelaars
 
-### Stap 3 — App openen
+> **De eerste keer duurt dit 3–8 minuten** omdat alle dependencies worden gedownload. Je ziet veel logs voorbijkomen — dit is normaal.
+
+Wacht tot je in de logs ziet:
+
+```
+ossonl-frontend-1  | ...nginx...
+```
+
+Dan is alles klaar.
+
+---
+
+### Stap 5 — App openen
+
+Open je browser en ga naar:
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | http://localhost:5173 |
-| **API docs** | http://localhost:8000/api/docs |
+| **Frontend (app)** | http://localhost:5173 |
+| **API documentatie** | http://localhost:8000/api/docs |
 | **Blockchain RPC** | http://localhost:8545 |
 
 ---
@@ -87,38 +129,41 @@ Dit commando:
 ## Gebruik
 
 ### Als makelaar (Lars of Louisa)
+
 1. Log in via http://localhost:5173/login
 2. Ga naar **Verkoperspaneel**
 3. Registreer een woning via het formulier
-4. Start een biedproces door een woning te koppelen aan een veiling
-5. Nodig bieders uit door hun e-mailadres toe te voegen
+4. Start een veiling en stel een deadline in
+5. Voeg bieders toe via e-mailadres — zij ontvangen een uitnodiging
 
 ### Als bieder
-1. Ontvang een uitnodiging van de makelaar
-2. Log in via de link in de uitnodiging
-3. Doorloop de iDIN-verificatie (mock in lokale omgeving)
-4. Breng een bod uit op de toegewezen woning — dit wordt via de blockchain vastgelegd
+
+1. Ontvang een uitnodiging van de makelaar (of registreer via de uitnodigingslink)
+2. Log in en voltooi de iDIN-verificatie (in lokale omgeving is dit een mock — klik gewoon op bevestigen)
+3. Breng een bod uit — dit wordt vastgelegd op de blockchain
+4. Na het verstrijken van de deadline zijn alle bedragen zichtbaar in de biedhistorie
 
 ---
 
-## Dagelijks gebruik (na eerste keer)
+## Dagelijks gebruik (na de eerste keer)
 
 ```bash
-# Opstarten
+# Starten (zonder herbouwen)
 docker compose up
 
 # Stoppen
 docker compose down
 
-# Stoppen + database wissen (reset naar beginstand)
+# Volledig reset (wist alle data, begint opnieuw)
 docker compose down -v
+docker compose up --build
 ```
 
-> **Let op:** `docker compose down -v` verwijdert alle data inclusief de database. Daarna wordt de seed opnieuw uitgevoerd bij de volgende `docker compose up`.
+> `docker compose down -v` verwijdert de database én de blockchain. Bij de volgende opstart worden de demo-gebruikers automatisch opnieuw aangemaakt.
 
 ---
 
-## Project structuur
+## Projectstructuur
 
 ```
 osso.nl/
@@ -150,31 +195,51 @@ osso.nl/
 
 ## Veelvoorkomende problemen
 
-### Poort al in gebruik
-Als je een foutmelding krijgt zoals `port is already allocated`, draait er al iets op die poort. Stop de conflicterende service of pas de poorten aan in `docker-compose.yml`.
+### "Port is already allocated"
 
-### Containers starten niet op
-Zorg dat Docker Desktop actief is (groen icoon in de taakbalk).
+Er draait al iets op poort 3306, 8000, 8545 of 5173. Stop de conflicterende service of herstart Docker Desktop.
 
-### Database reset nodig
-```bash
-docker compose down -v
-docker compose up --build
+### Docker meldt dat WSL 2 ontbreekt
+
+Open PowerShell als Administrator:
+
+```powershell
+wsl --install
 ```
 
-### Frontend toont oude data na herstart
-Open de browser in incognito modus (`Cmd+Shift+N` op Mac, `Ctrl+Shift+N` op Windows) om een verse sessie te starten zonder opgeslagen tokens.
+Herstart je pc en open Docker Desktop opnieuw.
+
+### Containers starten niet op
+
+- Zorg dat Docker Desktop open staat en het icoon in de taakbalk groen is
+- Probeer: `docker compose down` gevolgd door `docker compose up --build`
+
+### "dependency failed to start" bij opstarten
+
+De blockchain container was niet op tijd klaar. Wacht even en probeer opnieuw:
+
+```
+docker compose up
+```
+
+### Frontend toont oude data / inloggen mislukt na reset
+
+Open de browser in incognito modus (`Ctrl+Shift+N`) om een verse sessie te starten zonder opgeslagen tokens.
+
+### Biedingen zijn verdwenen na herstart
+
+De lokale Hardhat blockchain is in-memory en reset bij elke herstart van de container. Dit is normaal gedrag in de lokale omgeving. Bieders moeten na een herstart opnieuw bieden. Gebruik `docker compose up` (zonder `-v`) om de MySQL-data te bewaren.
 
 ---
 
 ## Blockchain details
 
-De lokale Hardhat blockchain gebruikt vaste test-accounts. Het smart contract `OssoBidRegistry` wordt automatisch gedeployd op adres:
+De lokale Hardhat blockchain gebruikt vaste test-accounts. Het smart contract `OssoBidRegistry` wordt automatisch gedeployd bij elke opstart op adres:
 
 ```
 0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
-Alle biedingen worden on-chain vastgelegd en zijn te verifiëren via het **Blockchain Monitor** paneel in de app (alleen zichtbaar voor makelaars).
+Alle biedingen worden on-chain vastgelegd en zijn te verifiëren via het **Blockchain Monitor** paneel in de app (alleen zichtbaar voor makelaars na inloggen).
 
 > ⚠️ De private keys in de lokale omgeving zijn publiek bekende Hardhat test-keys. Gebruik deze **nooit** op een live netwerk.
