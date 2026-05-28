@@ -111,7 +111,7 @@ Open je browser en ga naar:
 
 | Service | URL |
 |---------|-----|
-| **Frontend (app)** | http://localhost:5173 |
+| **Frontend (app)** | http://localhost:3000 |
 | **API documentatie** | http://localhost:8000/api/docs |
 | **Blockchain RPC** | http://localhost:8545 |
 
@@ -130,7 +130,7 @@ Open je browser en ga naar:
 
 ### Als makelaar (Lars of Louisa)
 
-1. Log in via http://localhost:5173/login
+1. Log in via http://localhost:3000/login
 2. Ga naar **Verkoperspaneel**
 3. Registreer een woning via het formulier
 4. Start een veiling en stel een deadline in
