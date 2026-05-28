@@ -42,6 +42,7 @@ async def startup():
     import models  # noqa: F401 — registreert alle modellen bij Base
     Base.metadata.create_all(bind=engine)
     _run_seed_if_empty()
+    _clear_stale_bids_if_blockchain_reset()
     asyncio.create_task(_start_indexer())
 
 
@@ -58,6 +59,28 @@ def _run_seed_if_empty():
             logger.info("Seed voltooid.")
     except Exception as e:
         logger.warning(f"Seed overgeslagen: {e}")
+    finally:
+        db.close()
+
+
+def _clear_stale_bids_if_blockchain_reset():
+    """Als de blockchain gereset is (geen bids on-chain), verwijder dan de MySQL cache."""
+    from database import SessionLocal
+    from models import IndexedBid
+    db = SessionLocal()
+    try:
+        indexed_count = db.query(IndexedBid).count()
+        if indexed_count == 0:
+            return
+        from blockchain.client import blockchain_client
+        chain_bids = blockchain_client.get_all_bids()
+        if len(chain_bids) == 0:
+            deleted = db.query(IndexedBid).delete()
+            db.commit()
+            if deleted:
+                logger.info(f"Blockchain reset gedetecteerd — {deleted} verouderde biedingen verwijderd uit MySQL.")
+    except Exception as e:
+        logger.warning(f"Controle blockchain reset mislukt: {e}")
     finally:
         db.close()
 

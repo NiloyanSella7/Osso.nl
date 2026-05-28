@@ -121,6 +121,21 @@ class BlockchainClient:
             for b in raw
         ]
 
+    def get_all_bids(self) -> list[dict]:
+        """Haalt alle biedingen op uit OssoBidRegistry over alle veilingen (auction_id 0-99)."""
+        if not self.registry:
+            return []
+        all_bids = []
+        for auction_id in range(100):
+            try:
+                bids = self.registry.functions.getBids(auction_id).call()
+                all_bids.extend(bids)
+                if len(bids) == 0 and auction_id > 10:
+                    break
+            except Exception:
+                break
+        return all_bids
+
     # ── AuctionManager ──────────────────────────────────────────────────────
 
     def create_auction(self, property_id: int, deadline: int) -> int:

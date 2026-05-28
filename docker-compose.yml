@@ -21,7 +21,7 @@ services:
     volumes:
       - blockchain_data:/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "--post-data", "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}", "--header", "Content-Type: application/json", "http://localhost:8545"]
+      test: ["CMD", "wget", "-qO-", "--post-data", "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}", "--header", "Content-Type: application/json", "http://127.0.0.1:8545"]
       interval: 5s
       timeout: 5s
       retries: 30
