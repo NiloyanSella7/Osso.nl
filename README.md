@@ -70,11 +70,9 @@ Beide commando's moeten een versienummer teruggeven. Zorg dat het Docker-icoon i
 Open **Command Prompt** of **PowerShell** en voer uit:
 
 ```
-git clone https://github.com/NiloyanSellathurai/osso.nl.git
-cd osso.nl
+git clone https://github.com/NiloyanSella7/Osso.nl.git
+cd Osso.nl
 ```
-
-> Vervang de URL hierboven door de werkelijke GitHub-URL als die anders is.
 
 ---
 
@@ -197,7 +195,7 @@ osso.nl/
 
 ### "Port is already allocated"
 
-Er draait al iets op poort 3306, 8000, 8545 of 5173. Stop de conflicterende service of herstart Docker Desktop.
+Er draait al iets op poort 3000, 3306, 8000 of 8545. Stop de conflicterende service of herstart Docker Desktop.
 
 ### Docker meldt dat WSL 2 ontbreekt
 
