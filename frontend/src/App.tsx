@@ -12,6 +12,7 @@ import Biedhistorie from './pages/Biedhistorie';
 import Gebruikersprofiel from './pages/Gebruikersprofiel';
 import Verkoperspaneel from './pages/Verkoperspaneel';
 import BlockchainMonitor from './pages/BlockchainMonitor';
+import KafkaMonitor from './pages/KafkaMonitor';
 import type { ReactNode } from 'react';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -35,6 +36,13 @@ function RequireMakelaar({ children }: { children: ReactNode }) {
   if (!user || (user.role !== 'makelaar' && user.role !== 'admin' && user.role !== 'seller')) {
     return <Navigate to="/" replace />;
   }
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { user, loading } = useAppContext();
+  if (loading) return <Spinner />;
+  if (!user || user.role !== 'admin') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -74,6 +82,7 @@ function AppRoutes() {
         <Route path="profiel" element={<Gebruikersprofiel />} />
         <Route path="verkoper" element={<Verkoperspaneel />} />
         <Route path="blockchain" element={<RequireMakelaar><BlockchainMonitor /></RequireMakelaar>} />
+        <Route path="kafka" element={<RequireAdmin><KafkaMonitor /></RequireAdmin>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

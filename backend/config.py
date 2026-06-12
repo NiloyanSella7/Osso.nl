@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     idin_mock: bool = True
     frontend_url: str = "http://localhost:5173"
+    kafka_bootstrap_servers: str = "localhost:9092"
 
 
 settings = Settings()

@@ -1,5 +1,8 @@
+import asyncio
+import logging
 from datetime import datetime
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,8 +11,13 @@ from database import get_db
 from dependencies import get_current_user
 from models import AuditLog, Auction, IndexedBid, User
 from schemas import BidCreate, BidOut, VerifyResponse, BlockchainBid
+from services.kafka_topics import BLOCKCHAIN_BID_SUBMIT
+from services.kafka_producer import kafka_producer
+from services.kafka_monitor_service import kafka_monitor
+from services import pending_bids
 
 router = APIRouter(prefix="/api/auctions", tags=["bids"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{auction_id}/bids", response_model=list[BidOut])
@@ -28,11 +36,9 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     deadline_passed = datetime.now() > auction.deadline
 
     if deadline_passed and indexed:
-        # Na deadline: haal bedragen op van blockchain en koppel op wallet adres
         try:
             from blockchain.client import blockchain_client
             chain_bids = blockchain_client.get_registry_bids(auction_id)
-            # Maak een dict van wallet -> bedrag voor snelle lookup
             amount_by_wallet = {
                 b["bidder_wallet"].lower(): b["amount_eur"]
                 for b in chain_bids
@@ -42,27 +48,27 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
                 if wallet in amount_by_wallet:
                     bid.amount_usdc = amount_by_wallet[wallet]
         except Exception:
-            pass  # Blockchain niet beschikbaar — bedragen blijven verborgen
+            pass
 
-    # Teruggeven in omgekeerde volgorde (nieuwste eerst)
     return list(reversed(indexed))
 
 
 @router.post("/{auction_id}/bids", response_model=BidOut, status_code=status.HTTP_201_CREATED)
-def place_bid(
+async def place_bid(
     auction_id: int,
     body: BidCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
     """
-    De bieder dient een bod in. De backend:
-    1. Valideert de bieder en veiling
-    2. Stuurt een echte transactie naar OssoBidRegistry op de blockchain
-    3. Krijgt een echte tx_hash + block_number terug
-    4. Slaat het bod op in MySQL als cache/index van de blockchain
+    Bied-indieningsflow via Kafka:
+    1. Valideer bieder en veiling
+    2. Publiceer naar blockchain.bid.submit (Kafka)
+    3. Blockchain Transaction Service pikt het op, voert tx uit, publiceert blockchain.bid.confirmed
+    4. Wacht op bevestiging via asyncio.Event (max 30s)
+    5. Sla bod op in MySQL als index van de blockchain
+    Fallback: als Kafka niet beschikbaar is, directe blockchain call.
     """
-    # ── Validatie ──────────────────────────────────────────────────────────
     auction = db.query(Auction).filter(Auction.id == auction_id).first()
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
@@ -78,42 +84,79 @@ def place_bid(
     if body.amount_usdc <= 0:
         raise HTTPException(status_code=400, detail="Bod-bedrag moet positief zijn")
 
-    # Voorkom dubbele biedingen
     existing_bid = db.query(IndexedBid).filter(
         IndexedBid.auction_id == auction_id,
         IndexedBid.bidder_wallet == current_user.wallet_address,
     ).first()
     if existing_bid:
-        raise HTTPException(status_code=400, detail="U heeft al een bod uitgebracht op deze woning. Per bieder is één bod toegestaan.")
+        raise HTTPException(status_code=400, detail="U heeft al een bod uitgebracht op deze woning.")
 
-    # ── Blockchain transactie ──────────────────────────────────────────────
+    amount_eurocents = int(body.amount_usdc * 100)
+    bid_key = str(uuid4())
+
+    # ── Kafka flow ────────────────────────────────────────────────────────────
+    bid_data = {
+        "bid_key": bid_key,
+        "auction_id": auction_id,
+        "bidder_wallet": current_user.wallet_address,
+        "amount_eurocents": amount_eurocents,
+        "financing_condition": body.financing_condition,
+    }
+
+    event = pending_bids.create(bid_key)
+    published = await kafka_producer.publish(BLOCKCHAIN_BID_SUBMIT, bid_data, key=bid_key)
+
+    if published:
+        kafka_monitor.record(BLOCKCHAIN_BID_SUBMIT, bid_data)
+        logger.info(f"Bid gepubliceerd naar Kafka: bid_key={bid_key[:8]}… auction={auction_id}")
+
     try:
-        from blockchain.client import blockchain_client
-        amount_eurocents = int(body.amount_usdc * 100)
-        chain_result = blockchain_client.place_bid(
-            auction_id=auction_id,
-            bidder_wallet=current_user.wallet_address,
-            amount_eurocents=amount_eurocents,
-            financing_condition=body.financing_condition,
-        )
-        tx_hash = chain_result["tx_hash"]
-        block_number = chain_result["block_number"]
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Blockchain transactie mislukt: {str(e)}"
-        )
+        if published:
+            # Wacht op bevestiging van de Blockchain Transaction Service
+            try:
+                await asyncio.wait_for(event.wait(), timeout=30.0)
+                result = pending_bids.pop_result(bid_key)
+                if not result or "error" in result:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Blockchain transactie mislukt: {result.get('error', 'onbekende fout') if result else 'geen resultaat'}",
+                    )
+                tx_hash = result["tx_hash"]
+                block_number = result["block_number"]
+            except asyncio.TimeoutError:
+                raise HTTPException(
+                    status_code=504,
+                    detail="Blockchain timeout: transactie kon niet bevestigd worden binnen 30 seconden",
+                )
+        else:
+            # Fallback: directe blockchain call als Kafka niet beschikbaar is
+            logger.warning("Kafka niet beschikbaar — directe blockchain call als fallback")
+            try:
+                from blockchain.client import blockchain_client
+                chain_result = await asyncio.to_thread(
+                    blockchain_client.place_bid,
+                    auction_id=auction_id,
+                    bidder_wallet=current_user.wallet_address,
+                    amount_eurocents=amount_eurocents,
+                    financing_condition=body.financing_condition,
+                )
+                tx_hash = chain_result["tx_hash"]
+                block_number = chain_result["block_number"]
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Blockchain transactie mislukt: {str(e)}")
+    finally:
+        pending_bids.remove(bid_key)
 
-    # ── MySQL index (cache van blockchain — GEEN bedrag opslaan) ─────────
+    # ── MySQL index (cache van blockchain — GEEN bedrag opslaan) ─────────────
     bid = IndexedBid(
         auction_id=auction_id,
         bidder_wallet=current_user.wallet_address,
-        amount_usdc=None,  # Bedrag wordt NOOIT opgeslagen in MySQL — alleen op blockchain
+        amount_usdc=None,
         tx_hash=tx_hash,
         block_number=block_number,
         financing_condition=body.financing_condition,
         bidder_name=current_user.full_name,
-        bidder_email=None,  # E-mail alleen zichtbaar na deadline
+        bidder_email=None,
     )
     db.add(bid)
     db.commit()
@@ -130,22 +173,18 @@ def place_bid(
             "auction_id": auction_id,
             "block_number": block_number,
             "financing_condition": body.financing_condition,
-            # Geen bedrag in audit log
+            "kafka_used": published,
+            "bid_key": bid_key,
         },
     ))
     db.commit()
 
-    # Retourneer zonder bedrag (biedperiode loopt nog)
     bid.amount_usdc = None
     return bid
 
 
 @router.get("/{auction_id}/verify", response_model=VerifyResponse)
 def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
-    """
-    Vergelijkt de geïndexeerde biedhistorie (MySQL) met de on-chain data (OssoBidRegistry).
-    Geeft aan of de off-chain cache overeenkomt met de blockchain.
-    """
     auction = db.get(Auction, auction_id)
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
@@ -166,15 +205,13 @@ def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
                 bidder_wallet=b["bidder_wallet"],
                 amount_usdc=b["amount_eur"],
                 block_number=b["block_number"],
-                tx_hash="0x" + "0" * 64,  # Registry slaat geen tx_hash op in state
+                tx_hash="0x" + "0" * 64,
             )
             for b in raw
         ]
     except Exception:
         pass
 
-    indexed_hashes = {b.tx_hash for b in indexed}
-    chain_hashes = {b.tx_hash for b in on_chain_bids}
     match = len(indexed) == len(on_chain_bids)
 
     return VerifyResponse(

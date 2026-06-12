@@ -12,6 +12,14 @@ pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def run_seed():
     db = SessionLocal()
     try:
+        niloyan = User(
+            email="niloyan@osso.nl",
+            full_name="Niloyan Sellathurai",
+            password_hash=pwd.hash("Beheerder123"),
+            role="admin",
+            status="active",
+            idin_verified=True,
+        )
         lars = User(
             email="Lars@osso.nl",
             full_name="Lars",
@@ -28,7 +36,7 @@ def run_seed():
             status="active",
             idin_verified=True,
         )
-        db.add_all([lars, louis])
+        db.add_all([niloyan, lars, louis])
         db.flush()
 
         db.add(Makelaar(
@@ -52,8 +60,9 @@ def run_seed():
 
         db.commit()
         print("✓ Seed succesvol!")
-        print("  Lars@osso.nl   (wachtwoord: Demo1234!)")
-        print("  louisa@osso.nl  (wachtwoord: Demo1234!)")
+        print("  niloyan@osso.nl  (wachtwoord: Beheerder123) [ADMIN]")
+        print("  Lars@osso.nl     (wachtwoord: Demo1234!)    [makelaar]")
+        print("  louisa@osso.nl   (wachtwoord: Demo1234!)    [makelaar]")
 
     except Exception as e:
         db.rollback()

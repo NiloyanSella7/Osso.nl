@@ -17,6 +17,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import HubIcon from '@mui/icons-material/Hub';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../lib/AppContext';
@@ -38,6 +39,12 @@ const BLOCKCHAIN_LINK = {
   icon: <MonitorHeartIcon sx={{ fontSize: 16 }} />,
 };
 
+const KAFKA_MONITOR_LINK = {
+  label: 'Kafka Monitor',
+  path: '/kafka',
+  icon: <HubIcon sx={{ fontSize: 16 }} />,
+};
+
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,7 +52,10 @@ export default function Navbar() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const isMakelaar = user?.role === 'seller' || user?.role === 'makelaar' || user?.role === 'admin';
-  const links = isMakelaar
+  const isAdmin = user?.role === 'admin';
+  const links = isAdmin
+    ? [...NAV_LINKS, SELLER_LINK, BLOCKCHAIN_LINK, KAFKA_MONITOR_LINK]
+    : isMakelaar
     ? [...NAV_LINKS, SELLER_LINK, BLOCKCHAIN_LINK]
     : NAV_LINKS;
 
