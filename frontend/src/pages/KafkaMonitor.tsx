@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Alert, Box, Chip, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Tooltip, Typography,
@@ -16,7 +16,7 @@ interface KafkaMessage {
   type?: string;
 }
 
-const TOPIC_META: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+const TOPIC_META: Record<string, { label: string; color: string; bg: string; icon: ReactNode }> = {
   'blockchain.bid.submit': {
     label: 'bid.submit',
     color: '#FF9800',

@@ -5,55 +5,20 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Vereist voor GitHub Container Registry (GHCR)
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────────
-  # CI opnieuw draaien als gate vóór deployment
-  # ────────────────────────────────────────────────────────────────────────────
-  ci-check:
-    name: CI gate
+
+  # ── 7 · Docker Hub — push naar registry ───────────────────────────────────
+  #
+  # Vereiste GitHub Secrets:
+  #   DOCKERHUB_USERNAME  →  jouw Docker Hub gebruikersnaam
+  #   DOCKERHUB_TOKEN     →  Docker Hub access token (hub.docker.com → Account settings → Security)
+  #
+  docker-hub:
+    name: "7 · Docker Hub"
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Backend — lint
-        working-directory: backend
-        run: |
-          pip install ruff
-          ruff check . --output-format=github
-
-      - name: Set up Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Frontend — build
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-  # ────────────────────────────────────────────────────────────────────────────
-  # Build & push Docker images naar GitHub Container Registry (GHCR)
-  # ────────────────────────────────────────────────────────────────────────────
-  publish:
-    name: Build & push images
-    runs-on: ubuntu-latest
-    needs: ci-check
 
     strategy:
       matrix:
@@ -69,24 +34,21 @@ jobs:
             image: osso-blockchain
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker metadata (tags & labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-,format=short
@@ -102,20 +64,20 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
-  # ────────────────────────────────────────────────────────────────────────────
-  # Deployment stap (pas in als je een server hebt)
-  # Vul DEPLOY_HOST, DEPLOY_USER en DEPLOY_KEY in als GitHub Secrets
-  # ────────────────────────────────────────────────────────────────────────────
+  # ── Deploy naar server (optioneel) ────────────────────────────────────────
+  #
+  # Vereiste GitHub Secrets:  DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY
+  # Vereiste GitHub Variable: DEPLOY_HOST (om de stap te activeren)
+  #
   deploy:
     name: Deploy naar server
     runs-on: ubuntu-latest
-    needs: publish
+    needs: docker-hub
     environment: production
     if: ${{ vars.DEPLOY_HOST != '' }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -125,8 +87,8 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
             cd /opt/osso
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f
-            echo "✓ Deployment voltooid op $(date)"
+            echo "Deployment voltooid op $(date)"

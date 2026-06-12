@@ -64,10 +64,7 @@ services:
       BACKEND_WALLET_ADDRESS: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
       IDIN_MOCK: "true"
       FRONTEND_URL: http://localhost:3000
-<<<<<<< HEAD
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-=======
->>>>>>> 7c6c60754de3a40e7bc941e05f05b7468cdf03ff
     depends_on:
       db:
         condition: service_healthy

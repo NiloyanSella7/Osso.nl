@@ -45,13 +45,7 @@ async def startup():
     Base.metadata.create_all(bind=engine)
     _run_seed_if_empty()
     _clear_stale_bids_if_blockchain_reset()
-<<<<<<< HEAD
-
-    # Kafka services starten
     asyncio.create_task(_start_kafka_services())
-=======
-    asyncio.create_task(_start_indexer())
->>>>>>> 7c6c60754de3a40e7bc941e05f05b7468cdf03ff
 
 
 def _run_seed_if_empty():
@@ -72,10 +66,6 @@ def _run_seed_if_empty():
 
 
 def _clear_stale_bids_if_blockchain_reset():
-<<<<<<< HEAD
-=======
-    """Als de blockchain gereset is (geen bids on-chain), verwijder dan de MySQL cache."""
->>>>>>> 7c6c60754de3a40e7bc941e05f05b7468cdf03ff
     from database import SessionLocal
     from models import IndexedBid
     db = SessionLocal()
@@ -89,18 +79,13 @@ def _clear_stale_bids_if_blockchain_reset():
             deleted = db.query(IndexedBid).delete()
             db.commit()
             if deleted:
-<<<<<<< HEAD
                 logger.info(f"Blockchain reset gedetecteerd — {deleted} verouderde biedingen verwijderd.")
-=======
-                logger.info(f"Blockchain reset gedetecteerd — {deleted} verouderde biedingen verwijderd uit MySQL.")
->>>>>>> 7c6c60754de3a40e7bc941e05f05b7468cdf03ff
     except Exception as e:
         logger.warning(f"Controle blockchain reset mislukt: {e}")
     finally:
         db.close()
 
 
-<<<<<<< HEAD
 async def _start_kafka_services():
     from services.kafka_producer import kafka_producer
     await kafka_producer.start()
@@ -121,9 +106,6 @@ async def _run_blockchain_transaction_service():
 
 
 async def _run_event_indexer():
-=======
-async def _start_indexer():
->>>>>>> 7c6c60754de3a40e7bc941e05f05b7468cdf03ff
     try:
         from services.event_indexer import run_event_indexer
         await run_event_indexer()
