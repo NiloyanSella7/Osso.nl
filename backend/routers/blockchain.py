@@ -32,14 +32,16 @@ def blockchain_feed(
     for bid in bids:
         auction = db.get(Auction, bid.auction_id)
         prop = db.get(Property, auction.property_id) if auction else None
-        result.append(BlockchainEntry(
-            id=bid.id,
-            tx_hash=bid.tx_hash,
-            block_number=bid.block_number,
-            bidder_wallet=bid.bidder_wallet,
-            auction_id=bid.auction_id,
-            property_address=prop.address if prop else "Onbekend",
-            financing_condition=bid.financing_condition,
-            indexed_at=bid.indexed_at,
-        ))
+        result.append(
+            BlockchainEntry(
+                id=bid.id,
+                tx_hash=bid.tx_hash,
+                block_number=bid.block_number,
+                bidder_wallet=bid.bidder_wallet,
+                auction_id=bid.auction_id,
+                property_address=prop.address if prop else "Onbekend",
+                financing_condition=bid.financing_condition,
+                indexed_at=bid.indexed_at,
+            )
+        )
     return result

@@ -38,10 +38,10 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     if deadline_passed and indexed:
         try:
             from blockchain.client import blockchain_client
+
             chain_bids = blockchain_client.get_registry_bids(auction_id)
             amount_by_wallet = {
-                b["bidder_wallet"].lower(): b["amount_eur"]
-                for b in chain_bids
+                b["bidder_wallet"].lower(): b["amount_eur"] for b in chain_bids
             }
             for bid in indexed:
                 wallet = (bid.bidder_wallet or "").lower()
@@ -53,7 +53,9 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     return list(reversed(indexed))
 
 
-@router.post("/{auction_id}/bids", response_model=BidOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{auction_id}/bids", response_model=BidOut, status_code=status.HTTP_201_CREATED
+)
 async def place_bid(
     auction_id: int,
     body: BidCreate,
@@ -78,18 +80,28 @@ async def place_bid(
         raise HTTPException(status_code=400, detail="De bieddeadline is verstreken")
 
     if not current_user.idin_verified:
-        raise HTTPException(status_code=403, detail="iDIN-verificatie vereist om te bieden")
+        raise HTTPException(
+            status_code=403, detail="iDIN-verificatie vereist om te bieden"
+        )
     if not current_user.wallet_address:
-        raise HTTPException(status_code=403, detail="Geen wallet-adres gekoppeld aan uw account")
+        raise HTTPException(
+            status_code=403, detail="Geen wallet-adres gekoppeld aan uw account"
+        )
     if body.amount_usdc <= 0:
         raise HTTPException(status_code=400, detail="Bod-bedrag moet positief zijn")
 
-    existing_bid = db.query(IndexedBid).filter(
-        IndexedBid.auction_id == auction_id,
-        IndexedBid.bidder_wallet == current_user.wallet_address,
-    ).first()
+    existing_bid = (
+        db.query(IndexedBid)
+        .filter(
+            IndexedBid.auction_id == auction_id,
+            IndexedBid.bidder_wallet == current_user.wallet_address,
+        )
+        .first()
+    )
     if existing_bid:
-        raise HTTPException(status_code=400, detail="U heeft al een bod uitgebracht op deze woning.")
+        raise HTTPException(
+            status_code=400, detail="U heeft al een bod uitgebracht op deze woning."
+        )
 
     amount_eurocents = int(body.amount_usdc * 100)
     bid_key = str(uuid4())
@@ -104,11 +116,15 @@ async def place_bid(
     }
 
     event = pending_bids.create(bid_key)
-    published = await kafka_producer.publish(BLOCKCHAIN_BID_SUBMIT, bid_data, key=bid_key)
+    published = await kafka_producer.publish(
+        BLOCKCHAIN_BID_SUBMIT, bid_data, key=bid_key
+    )
 
     if published:
         kafka_monitor.record(BLOCKCHAIN_BID_SUBMIT, bid_data)
-        logger.info(f"Bid gepubliceerd naar Kafka: bid_key={bid_key[:8]}… auction={auction_id}")
+        logger.info(
+            f"Bid gepubliceerd naar Kafka: bid_key={bid_key[:8]}… auction={auction_id}"
+        )
 
     try:
         if published:
@@ -130,9 +146,12 @@ async def place_bid(
                 )
         else:
             # Fallback: directe blockchain call als Kafka niet beschikbaar is
-            logger.warning("Kafka niet beschikbaar — directe blockchain call als fallback")
+            logger.warning(
+                "Kafka niet beschikbaar — directe blockchain call als fallback"
+            )
             try:
                 from blockchain.client import blockchain_client
+
                 chain_result = await asyncio.to_thread(
                     blockchain_client.place_bid,
                     auction_id=auction_id,
@@ -143,7 +162,9 @@ async def place_bid(
                 tx_hash = chain_result["tx_hash"]
                 block_number = chain_result["block_number"]
             except Exception as e:
-                raise HTTPException(status_code=502, detail=f"Blockchain transactie mislukt: {str(e)}")
+                raise HTTPException(
+                    status_code=502, detail=f"Blockchain transactie mislukt: {str(e)}"
+                )
     finally:
         pending_bids.remove(bid_key)
 
@@ -162,21 +183,23 @@ async def place_bid(
     db.commit()
     db.refresh(bid)
 
-    db.add(AuditLog(
-        action_type="bid.placed",
-        user_id=current_user.id,
-        wallet_address=current_user.wallet_address,
-        tx_hash=tx_hash,
-        entity_type="bid",
-        entity_id=bid.id,
-        details={
-            "auction_id": auction_id,
-            "block_number": block_number,
-            "financing_condition": body.financing_condition,
-            "kafka_used": published,
-            "bid_key": bid_key,
-        },
-    ))
+    db.add(
+        AuditLog(
+            action_type="bid.placed",
+            user_id=current_user.id,
+            wallet_address=current_user.wallet_address,
+            tx_hash=tx_hash,
+            entity_type="bid",
+            entity_id=bid.id,
+            details={
+                "auction_id": auction_id,
+                "block_number": block_number,
+                "financing_condition": body.financing_condition,
+                "kafka_used": published,
+                "bid_key": bid_key,
+            },
+        )
+    )
     db.commit()
 
     bid.amount_usdc = None
@@ -199,6 +222,7 @@ def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     on_chain_bids: list[BlockchainBid] = []
     try:
         from blockchain.client import blockchain_client
+
         raw = blockchain_client.get_registry_bids(auction_id)
         on_chain_bids = [
             BlockchainBid(

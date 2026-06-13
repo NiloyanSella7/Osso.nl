@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 def _require_admin(token: str) -> User:
     db = SessionLocal()
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
         user_id = payload.get("sub")
         if not user_id:
             raise ValueError("Geen user_id in token")

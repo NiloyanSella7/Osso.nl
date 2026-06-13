@@ -12,12 +12,20 @@ def test_topic_names():
 
 
 def test_topics_are_unique():
-    topics = [BLOCKCHAIN_BID_SUBMIT, BLOCKCHAIN_BID_CONFIRMED, BLOCKCHAIN_AUCTION_EVENTS]
+    topics = [
+        BLOCKCHAIN_BID_SUBMIT,
+        BLOCKCHAIN_BID_CONFIRMED,
+        BLOCKCHAIN_AUCTION_EVENTS,
+    ]
     assert len(set(topics)) == len(topics)
 
 
 def test_topics_use_dot_notation():
-    topics = [BLOCKCHAIN_BID_SUBMIT, BLOCKCHAIN_BID_CONFIRMED, BLOCKCHAIN_AUCTION_EVENTS]
+    topics = [
+        BLOCKCHAIN_BID_SUBMIT,
+        BLOCKCHAIN_BID_CONFIRMED,
+        BLOCKCHAIN_AUCTION_EVENTS,
+    ]
     for topic in topics:
         assert "." in topic
         assert topic.startswith("blockchain.")

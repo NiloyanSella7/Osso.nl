@@ -3,6 +3,7 @@ Event Indexer: consumeert blockchain.bid.confirmed events van Kafka
 en schrijft de relevante data weg naar MySQL als leescache.
 De blockchain blijft de bron van waarheid.
 """
+
 import asyncio
 import json
 import logging
@@ -46,7 +47,9 @@ async def run_event_indexer() -> None:
             data: dict = msg.value
 
             if data.get("status") == "failed" or "error" in data:
-                logger.warning(f"Mislukte transactie ontvangen, niet geïndexeerd: {data}")
+                logger.warning(
+                    f"Mislukte transactie ontvangen, niet geïndexeerd: {data}"
+                )
                 continue
 
             tx_hash: str = data.get("tx_hash", "")
@@ -72,7 +75,9 @@ async def run_event_indexer() -> None:
                 )
                 db.add(bid)
                 db.commit()
-                logger.info(f"Bod geïndexeerd via Kafka Event Indexer: tx={tx_hash} auction={auction_id}")
+                logger.info(
+                    f"Bod geïndexeerd via Kafka Event Indexer: tx={tx_hash} auction={auction_id}"
+                )
             except Exception as e:
                 logger.error(f"Event Indexer DB fout: {e}")
                 db.rollback()

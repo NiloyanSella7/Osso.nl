@@ -2,6 +2,7 @@
 Seed script: twee makelaars waarmee ingelogd kan worden.
 Gebruik: python3.13 seed.py
 """
+
 from passlib.context import CryptContext
 from database import SessionLocal
 from models import Makelaar, User
@@ -39,24 +40,28 @@ def run_seed():
         db.add_all([niloyan, lars, louis])
         db.flush()
 
-        db.add(Makelaar(
-            user_id=lars.id,
-            company_name="Osso.nl",
-            contact_name="Lars",
-            email="Lars@osso.nl",
-            phone="",
-            logo_initials="LA",
-            logo_color="#1B4F72",
-        ))
-        db.add(Makelaar(
-            user_id=louis.id,
-            company_name="Osso.nl",
-            contact_name="Louisa",
-            email="louisa@osso.nl",
-            phone="",
-            logo_initials="LO",
-            logo_color="#4A148C",
-        ))
+        db.add(
+            Makelaar(
+                user_id=lars.id,
+                company_name="Osso.nl",
+                contact_name="Lars",
+                email="Lars@osso.nl",
+                phone="",
+                logo_initials="LA",
+                logo_color="#1B4F72",
+            )
+        )
+        db.add(
+            Makelaar(
+                user_id=louis.id,
+                company_name="Osso.nl",
+                contact_name="Louisa",
+                email="louisa@osso.nl",
+                phone="",
+                logo_initials="LO",
+                logo_color="#4A148C",
+            )
+        )
 
         db.commit()
         print("✓ Seed succesvol!")

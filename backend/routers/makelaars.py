@@ -18,6 +18,7 @@ def list_makelaars(db: Annotated[Session, Depends(get_db)]):
 @router.get("/{makelaar_id}", response_model=MakelaarOut)
 def get_makelaar(makelaar_id: int, db: Annotated[Session, Depends(get_db)]):
     from fastapi import HTTPException
+
     m = db.get(Makelaar, makelaar_id)
     if not m:
         raise HTTPException(status_code=404, detail="Makelaar niet gevonden")

@@ -37,7 +37,9 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
         raise HTTPException(status_code=400, detail="E-mailadres is al in gebruik")
 
     if body.role == "makelaar" and not body.company_name:
-        raise HTTPException(status_code=400, detail="Bedrijfsnaam is verplicht voor makelaars")
+        raise HTTPException(
+            status_code=400, detail="Bedrijfsnaam is verplicht voor makelaars"
+        )
 
     # Makelaars wachten op NVM-goedkeuring, bieders wachten op makelaar-uitnodiging
     if body.role == "admin":
@@ -73,7 +75,14 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
     db.commit()
     db.refresh(user)
 
-    db.add(AuditLog(action_type="user.register", user_id=user.id, entity_type="user", entity_id=user.id))
+    db.add(
+        AuditLog(
+            action_type="user.register",
+            user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
+    )
     db.commit()
     return user
 
@@ -84,14 +93,25 @@ def login(
     db: Annotated[Session, Depends(get_db)],
 ):
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not user.password_hash or not _verify_password(form_data.password, user.password_hash):
+    if (
+        not user
+        or not user.password_hash
+        or not _verify_password(form_data.password, user.password_hash)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Onjuist e-mailadres of wachtwoord",
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token({"sub": str(user.id), "role": user.role})
-    db.add(AuditLog(action_type="user.login", user_id=user.id, entity_type="user", entity_id=user.id))
+    db.add(
+        AuditLog(
+            action_type="user.login",
+            user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
+    )
     db.commit()
     return {"access_token": token, "token_type": "bearer"}
 
@@ -109,7 +129,9 @@ def idin_start(
     from config import settings
 
     if not settings.idin_mock:
-        raise HTTPException(status_code=501, detail="iDIN productie-integratie nog niet geïmplementeerd")
+        raise HTTPException(
+            status_code=501, detail="iDIN productie-integratie nog niet geïmplementeerd"
+        )
 
     current_user.wallet_address = body.wallet_address
     db.commit()
@@ -151,18 +173,21 @@ def idin_callback(
     if current_user.wallet_address:
         try:
             from blockchain.client import blockchain_client
+
             blockchain_client.add_to_whitelist(current_user.wallet_address)
         except Exception:
             pass  # KYC-contract niet beschikbaar in dev
 
-    db.add(AuditLog(
-        action_type="idin.verified",
-        user_id=current_user.id,
-        wallet_address=current_user.wallet_address,
-        entity_type="user",
-        entity_id=current_user.id,
-        details={"idin_hash": idin_hash},
-    ))
+    db.add(
+        AuditLog(
+            action_type="idin.verified",
+            user_id=current_user.id,
+            wallet_address=current_user.wallet_address,
+            entity_type="user",
+            entity_id=current_user.id,
+            details={"idin_hash": idin_hash},
+        )
+    )
     db.commit()
 
     return {"message": "iDIN-verificatie succesvol", "status": current_user.status}
@@ -172,6 +197,7 @@ def idin_callback(
 def idin_mock_callback(user_id: int, db: Annotated[Session, Depends(get_db)]):
     """Mock iDIN-callback pagina — alleen beschikbaar in PoC-modus."""
     from config import settings
+
     if not settings.idin_mock:
         raise HTTPException(status_code=404)
 
@@ -184,7 +210,8 @@ def idin_mock_callback(user_id: int, db: Annotated[Session, Depends(get_db)]):
         "user_id": user_id,
         "example_callback_body": {
             "idin_identifier": f"mock-idin-{user_id}-identifier",
-            "wallet_address": user.wallet_address or "0x0000000000000000000000000000000000000001",
+            "wallet_address": user.wallet_address
+            or "0x0000000000000000000000000000000000000001",
             "full_name": user.full_name,
         },
     }
@@ -200,7 +227,9 @@ def nvm_approve(
     In productie zou dit door een NVM-medewerker worden geactiveerd.
     """
     if current_user.role not in ("makelaar", "seller"):
-        raise HTTPException(status_code=400, detail="Alleen makelaars kunnen NVM-goedkeuring aanvragen")
+        raise HTTPException(
+            status_code=400, detail="Alleen makelaars kunnen NVM-goedkeuring aanvragen"
+        )
 
     if current_user.status == "active":
         return {"message": "Account is al goedgekeurd", "status": "active"}
@@ -208,13 +237,15 @@ def nvm_approve(
     current_user.status = "active"
     current_user.verified_at = datetime.now(timezone.utc)
 
-    db.add(AuditLog(
-        action_type="nvm.approved",
-        user_id=current_user.id,
-        entity_type="user",
-        entity_id=current_user.id,
-        details={"mock": True},
-    ))
+    db.add(
+        AuditLog(
+            action_type="nvm.approved",
+            user_id=current_user.id,
+            entity_type="user",
+            entity_id=current_user.id,
+            details={"mock": True},
+        )
+    )
     db.commit()
     db.refresh(current_user)
 

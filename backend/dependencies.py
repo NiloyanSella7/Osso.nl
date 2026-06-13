@@ -14,8 +14,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def create_access_token(data: dict) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    return jwt.encode({**data, "exp": expire}, settings.secret_key, algorithm=settings.algorithm)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.access_token_expire_minutes
+    )
+    return jwt.encode(
+        {**data, "exp": expire}, settings.secret_key, algorithm=settings.algorithm
+    )
 
 
 def get_current_user(
@@ -28,7 +32,9 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(
+            token, settings.secret_key, algorithms=[settings.algorithm]
+        )
         user_id: int | None = payload.get("sub")
         if user_id is None:
             raise credentials_exc
@@ -44,6 +50,9 @@ def get_current_user(
 def require_role(*roles: str):
     def checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
         if current_user.role not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Onvoldoende rechten")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Onvoldoende rechten"
+            )
         return current_user
+
     return checker

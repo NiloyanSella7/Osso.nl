@@ -2,6 +2,7 @@
 Blockchain client die communiceert met de Solidity smart contracts via web3.py.
 Werkt met zowel een lokale Hardhat-node als het Polygon PoS netwerk.
 """
+
 import json
 from pathlib import Path
 
@@ -29,7 +30,9 @@ class BlockchainClient:
         self._connected = self.w3.is_connected()
 
         if self._connected and settings.backend_wallet_private_key != "0x" + "0" * 64:
-            self.account = self.w3.eth.account.from_key(settings.backend_wallet_private_key)
+            self.account = self.w3.eth.account.from_key(
+                settings.backend_wallet_private_key
+            )
         else:
             self.account = None
 
@@ -40,12 +43,8 @@ class BlockchainClient:
         self.auction_manager = self._load_contract(
             "AuctionManager", settings.auction_manager_address
         )
-        self.bid_escrow = self._load_contract(
-            "BidEscrow", settings.bid_escrow_address
-        )
-        self.kyc_gate = self._load_contract(
-            "KYCGate", settings.kyc_gate_address
-        )
+        self.bid_escrow = self._load_contract("BidEscrow", settings.bid_escrow_address)
+        self.kyc_gate = self._load_contract("KYCGate", settings.kyc_gate_address)
 
     def _load_contract(self, name: str, address: str):
         abi = _load_abi(name)
@@ -59,12 +58,14 @@ class BlockchainClient:
         if not self.account:
             raise RuntimeError("Backend wallet niet geconfigureerd")
         nonce = self.w3.eth.get_transaction_count(self.account.address)
-        tx = fn.build_transaction({
-            "from": self.account.address,
-            "nonce": nonce,
-            "gas": 300_000,
-            "gasPrice": self.w3.eth.gas_price,
-        })
+        tx = fn.build_transaction(
+            {
+                "from": self.account.address,
+                "nonce": nonce,
+                "gas": 300_000,
+                "gasPrice": self.w3.eth.gas_price,
+            }
+        )
         signed = self.w3.eth.account.sign_transaction(tx, self.account.key)
         tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
         receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
@@ -84,9 +85,13 @@ class BlockchainClient:
         Retourneert: {'tx_hash': str, 'block_number': int}
         """
         if not self.registry:
-            raise RuntimeError("OssoBidRegistry contract niet geladen — controleer OSSO_REGISTRY_ADDRESS in .env")
+            raise RuntimeError(
+                "OssoBidRegistry contract niet geladen — controleer OSSO_REGISTRY_ADDRESS in .env"
+            )
         if not self.account:
-            raise RuntimeError("Backend wallet niet geconfigureerd — controleer BACKEND_WALLET_PRIVATE_KEY in .env")
+            raise RuntimeError(
+                "Backend wallet niet geconfigureerd — controleer BACKEND_WALLET_PRIVATE_KEY in .env"
+            )
 
         checksum_wallet = Web3.to_checksum_address(bidder_wallet)
         receipt = self._send_tx(

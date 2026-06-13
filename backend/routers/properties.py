@@ -11,7 +11,9 @@ from schemas import MakelaarOut, PropertyCreate, PropertyOut, PropertyUpdate
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
 
-def _build_property_out(prop: Property, makelaar: Makelaar | None = None) -> PropertyOut:
+def _build_property_out(
+    prop: Property, makelaar: Makelaar | None = None
+) -> PropertyOut:
     images = [img.url for img in sorted(prop.images, key=lambda i: i.sort_order)]
     return PropertyOut(
         id=prop.id,
@@ -40,11 +42,16 @@ def list_properties(
     db: Annotated[Session, Depends(get_db)],
     status_filter: str | None = None,
 ):
-    q = db.query(Property).options(joinedload(Property.images), joinedload(Property.auction))
+    q = db.query(Property).options(
+        joinedload(Property.images), joinedload(Property.auction)
+    )
     if status_filter:
         q = q.filter(Property.status == status_filter)
     properties = q.all()
-    return [_build_property_out(p, _get_makelaar_for_seller(db, p.seller_id)) for p in properties]
+    return [
+        _build_property_out(p, _get_makelaar_for_seller(db, p.seller_id))
+        for p in properties
+    ]
 
 
 @router.get("/{property_id}", response_model=PropertyOut)
@@ -90,12 +97,14 @@ def create_property(
     db.commit()
     db.refresh(prop)
 
-    db.add(AuditLog(
-        action_type="property.create",
-        user_id=current_user.id,
-        entity_type="property",
-        entity_id=prop.id,
-    ))
+    db.add(
+        AuditLog(
+            action_type="property.create",
+            user_id=current_user.id,
+            entity_type="property",
+            entity_id=prop.id,
+        )
+    )
     db.commit()
     return _build_property_out(prop, _get_makelaar_for_seller(db, prop.seller_id))
 
@@ -111,7 +120,10 @@ def update_property(
     if not prop:
         raise HTTPException(status_code=404, detail="Woning niet gevonden")
 
-    if current_user.role not in ("makelaar", "admin") and prop.seller_id != current_user.id:
+    if (
+        current_user.role not in ("makelaar", "admin")
+        and prop.seller_id != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="Geen toegang tot deze woning")
 
     for field, value in body.model_dump(exclude_none=True).items():

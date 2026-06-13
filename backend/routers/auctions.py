@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api/auctions", tags=["auctions"])
 def _auction_out(auction: Auction, db: Session | None = None) -> AuctionOut:
     # Bereken de effectieve status op basis van de deadline
     deadline_passed = auction.deadline < datetime.now()
-    effective_status = "closed" if (auction.status == "open" and deadline_passed) else auction.status
+    effective_status = (
+        "closed" if (auction.status == "open" and deadline_passed) else auction.status
+    )
 
     # Sla de gesloten status op in de DB als dat nog niet het geval is
     if effective_status == "closed" and auction.status == "open" and db:
@@ -58,7 +60,12 @@ def get_auction(auction_id: int, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/{auction_id}/status", response_model=AuctionStatus)
 def get_auction_status(auction_id: int, db: Annotated[Session, Depends(get_db)]):
-    auction = db.query(Auction).options(joinedload(Auction.bids)).filter(Auction.id == auction_id).first()
+    auction = (
+        db.query(Auction)
+        .options(joinedload(Auction.bids))
+        .filter(Auction.id == auction_id)
+        .first()
+    )
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
     return AuctionStatus(
@@ -81,10 +88,14 @@ def create_auction(
         raise HTTPException(status_code=404, detail="Woning niet gevonden")
 
     if db.query(Auction).filter(Auction.property_id == body.property_id).first():
-        raise HTTPException(status_code=400, detail="Er is al een veiling actief voor deze woning")
+        raise HTTPException(
+            status_code=400, detail="Er is al een veiling actief voor deze woning"
+        )
 
     if body.deadline <= body.start_date:
-        raise HTTPException(status_code=422, detail="Deadline moet na de startdatum liggen")
+        raise HTTPException(
+            status_code=422, detail="Deadline moet na de startdatum liggen"
+        )
 
     auction = Auction(
         property_id=body.property_id,
@@ -99,6 +110,7 @@ def create_auction(
     contract_auction_id: int | None = None
     try:
         from blockchain.client import blockchain_client
+
         contract_auction_id = blockchain_client.create_auction(
             property_id=body.property_id,
             deadline=int(body.deadline.timestamp()),
@@ -113,13 +125,15 @@ def create_auction(
     db.commit()
     db.refresh(auction)
 
-    db.add(AuditLog(
-        action_type="auction.create",
-        user_id=current_user.id,
-        entity_type="auction",
-        entity_id=auction.id,
-        details={"contract_auction_id": contract_auction_id},
-    ))
+    db.add(
+        AuditLog(
+            action_type="auction.create",
+            user_id=current_user.id,
+            entity_type="auction",
+            entity_id=auction.id,
+            details={"contract_auction_id": contract_auction_id},
+        )
+    )
     db.commit()
     return _auction_out(auction)
 
@@ -130,7 +144,12 @@ def close_auction(
     current_user: Annotated[User, Depends(require_role("makelaar", "admin"))],
     db: Annotated[Session, Depends(get_db)],
 ):
-    auction = db.query(Auction).options(joinedload(Auction.bids)).filter(Auction.id == auction_id).first()
+    auction = (
+        db.query(Auction)
+        .options(joinedload(Auction.bids))
+        .filter(Auction.id == auction_id)
+        .first()
+    )
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
 
@@ -151,6 +170,7 @@ def close_auction(
     # Probeer op blockchain te sluiten
     try:
         from blockchain.client import blockchain_client
+
         if auction.contract_auction_id:
             blockchain_client.close_auction(auction.contract_auction_id)
     except Exception:
@@ -159,12 +179,14 @@ def close_auction(
     db.commit()
     db.refresh(auction)
 
-    db.add(AuditLog(
-        action_type="auction.close",
-        user_id=current_user.id,
-        entity_type="auction",
-        entity_id=auction.id,
-        details={"winner_wallet": winner_wallet},
-    ))
+    db.add(
+        AuditLog(
+            action_type="auction.close",
+            user_id=current_user.id,
+            entity_type="auction",
+            entity_id=auction.id,
+            details={"winner_wallet": winner_wallet},
+        )
+    )
     db.commit()
     return _auction_out(auction)

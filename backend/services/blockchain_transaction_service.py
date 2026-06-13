@@ -5,6 +5,7 @@ Luistert naar 'blockchain.bid.submit' berichten, voert de Ethereum transactie ui
 namens de operator wallet en publiceert het resultaat naar 'blockchain.bid.confirmed'.
 Notificeert ook de wachtende Bids Service via asyncio.Event.
 """
+
 import asyncio
 import json
 import logging
@@ -33,7 +34,9 @@ async def run_blockchain_transaction_service() -> None:
             heartbeat_interval_ms=10000,
         )
         await consumer.start()
-        logger.info("Blockchain Transaction Service gestart — luistert naar blockchain.bid.submit")
+        logger.info(
+            "Blockchain Transaction Service gestart — luistert naar blockchain.bid.submit"
+        )
     except Exception as e:
         logger.warning(f"Blockchain Transaction Service kon niet starten: {e}")
         return
@@ -47,7 +50,9 @@ async def run_blockchain_transaction_service() -> None:
             amount_eurocents: int = data.get("amount_eurocents", 0)
             financing_condition: bool = data.get("financing_condition", False)
 
-            logger.info(f"Blockchain tx verwerken: bid_key={bid_key[:8]}… auction={auction_id}")
+            logger.info(
+                f"Blockchain tx verwerken: bid_key={bid_key[:8]}… auction={auction_id}"
+            )
 
             try:
                 from blockchain.client import blockchain_client
@@ -71,23 +76,32 @@ async def run_blockchain_transaction_service() -> None:
                     "block_number": block_number,
                 }
 
-                await kafka_producer.publish(BLOCKCHAIN_BID_CONFIRMED, confirmed, key=bid_key)
+                await kafka_producer.publish(
+                    BLOCKCHAIN_BID_CONFIRMED, confirmed, key=bid_key
+                )
                 kafka_monitor.record(BLOCKCHAIN_BID_CONFIRMED, confirmed)
 
-                pending_bids.resolve(bid_key, {"tx_hash": tx_hash, "block_number": block_number})
-                logger.info(f"Blockchain tx bevestigd: tx={tx_hash} block={block_number}")
+                pending_bids.resolve(
+                    bid_key, {"tx_hash": tx_hash, "block_number": block_number}
+                )
+                logger.info(
+                    f"Blockchain tx bevestigd: tx={tx_hash} block={block_number}"
+                )
 
             except Exception as e:
                 logger.error(f"Blockchain tx mislukt voor bid_key={bid_key[:8]}…: {e}")
                 error_msg = str(e)
                 pending_bids.resolve(bid_key, {"error": error_msg})
-                kafka_monitor.record(BLOCKCHAIN_BID_CONFIRMED, {
-                    "bid_key": bid_key,
-                    "auction_id": auction_id,
-                    "bidder_wallet": bidder_wallet,
-                    "error": error_msg,
-                    "status": "failed",
-                })
+                kafka_monitor.record(
+                    BLOCKCHAIN_BID_CONFIRMED,
+                    {
+                        "bid_key": bid_key,
+                        "auction_id": auction_id,
+                        "bidder_wallet": bidder_wallet,
+                        "error": error_msg,
+                        "status": "failed",
+                    },
+                )
 
     except asyncio.CancelledError:
         pass

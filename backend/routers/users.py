@@ -31,10 +31,14 @@ def update_me(
     if body.full_name is not None:
         current_user.full_name = body.full_name
     if body.wallet_address is not None:
-        existing = db.query(User).filter(
-            User.wallet_address == body.wallet_address.lower(),
-            User.id != current_user.id,
-        ).first()
+        existing = (
+            db.query(User)
+            .filter(
+                User.wallet_address == body.wallet_address.lower(),
+                User.id != current_user.id,
+            )
+            .first()
+        )
         if existing:
             raise HTTPException(status_code=400, detail="Wallet-adres al in gebruik")
         current_user.wallet_address = body.wallet_address.lower()
@@ -73,6 +77,7 @@ def invite_bidder(
         raise HTTPException(status_code=400, detail="E-mailadres is al geregistreerd")
 
     from passlib.context import CryptContext
+
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     temp_password = "Bieden123@"
 
@@ -89,17 +94,19 @@ def invite_bidder(
     db.commit()
     db.refresh(new_user)
 
-    db.add(AuditLog(
-        action_type="user.invite",
-        user_id=current_user.id,
-        entity_type="user",
-        entity_id=new_user.id,
-        details={
-            "invited_email": body.email,
-            "property_id": body.property_id,
-            "temp_password": temp_password,  # In productie: stuur per e-mail
-        },
-    ))
+    db.add(
+        AuditLog(
+            action_type="user.invite",
+            user_id=current_user.id,
+            entity_type="user",
+            entity_id=new_user.id,
+            details={
+                "invited_email": body.email,
+                "property_id": body.property_id,
+                "temp_password": temp_password,  # In productie: stuur per e-mail
+            },
+        )
+    )
     db.commit()
 
     return new_user

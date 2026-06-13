@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -25,6 +26,7 @@ class RegisterRequest(BaseModel):
 
 # ── iDIN ─────────────────────────────────────────────────────────────────────
 
+
 class IdinStartRequest(BaseModel):
     wallet_address: str
 
@@ -43,6 +45,7 @@ class IdinCallbackRequest(BaseModel):
 
 
 # ── User ─────────────────────────────────────────────────────────────────────
+
 
 class UserOut(BaseModel):
     id: int
@@ -72,6 +75,7 @@ class InviteRequest(BaseModel):
 
 # ── Makelaar ──────────────────────────────────────────────────────────────────
 
+
 class MakelaarOut(BaseModel):
     id: int
     company_name: str
@@ -85,6 +89,7 @@ class MakelaarOut(BaseModel):
 
 
 # ── Property ─────────────────────────────────────────────────────────────────
+
 
 class PropertyCreate(BaseModel):
     address: str
@@ -131,6 +136,7 @@ class PropertyUpdate(BaseModel):
 
 # ── Auction ──────────────────────────────────────────────────────────────────
 
+
 class AuctionCreate(BaseModel):
     property_id: int
     start_date: datetime
@@ -161,11 +167,13 @@ class AuctionStatus(BaseModel):
 
 # ── Bid ──────────────────────────────────────────────────────────────────────
 
+
 class BidCreate(BaseModel):
     """
     Frontend stuurt alleen bedrag en voorbehoud.
     De backend verwerkt de blockchain-transactie en bepaalt tx_hash + block_number.
     """
+
     amount_usdc: float
     financing_condition: bool = False
 
@@ -174,7 +182,9 @@ class BidOut(BaseModel):
     id: int
     auction_id: int
     bidder_wallet: str
-    amount_usdc: float | None = None  # Alleen gevuld na deadline, gelezen van blockchain
+    amount_usdc: float | None = (
+        None  # Alleen gevuld na deadline, gelezen van blockchain
+    )
     tx_hash: str
     block_number: int
     financing_condition: bool
@@ -187,6 +197,7 @@ class BidOut(BaseModel):
 
 
 # ── Blockchain verify ─────────────────────────────────────────────────────────
+
 
 class BlockchainBid(BaseModel):
     bidder_wallet: str
@@ -202,6 +213,7 @@ class VerifyResponse(BaseModel):
 
 
 # ── Blockchain feed ───────────────────────────────────────────────────────────
+
 
 class BlockchainEntry(BaseModel):
     id: int
