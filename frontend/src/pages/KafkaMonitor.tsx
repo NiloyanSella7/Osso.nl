@@ -4,7 +4,7 @@ import {
   TableContainer, TableHead, TableRow, Tooltip, Typography,
 } from '@mui/material';
 import HubIcon from '@mui/icons-material/Hub';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import PendingOutlinedIcon from '@mui/icons-material/PendingOutlined';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 
