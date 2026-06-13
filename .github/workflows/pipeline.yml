@@ -1,0 +1,177 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1 · BACKEND  —  lint, type check, unit tests
+  # ──────────────────────────────────────────────────────────────────────────
+  backend:
+    name: "1 · Backend tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt ruff mypy pytest pytest-asyncio
+
+      - name: Ruff — lint
+        working-directory: backend
+        run: ruff check . --output-format=github
+
+      - name: Ruff — format check
+        working-directory: backend
+        run: ruff format . --check
+
+      - name: Mypy — type check
+        working-directory: backend
+        run: mypy . --ignore-missing-imports --exclude '.venv' --exclude 'alembic'
+
+      - name: Pytest — unit tests
+        working-directory: backend
+        run: pytest tests/ -v --tb=short --asyncio-mode=auto
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2 · FRONTEND  —  type check, lint, build, test
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend:
+    name: "2 · Frontend tests"
+    runs-on: ubuntu-latest
+    needs: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript — type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: ESLint — lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Vite — production build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3 · BLOCKCHAIN  —  compile Solidity + Hardhat tests
+  # ──────────────────────────────────────────────────────────────────────────
+  blockchain:
+    name: "3 · Blockchain tests"
+    runs-on: ubuntu-latest
+    needs: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: blockchain/package-lock.json
+
+      - name: Install dependencies
+        working-directory: blockchain
+        run: npm ci
+
+      - name: Hardhat — compile Solidity
+        working-directory: blockchain
+        run: npm run compile
+
+      - name: Hardhat — run tests
+        working-directory: blockchain
+        run: npm test
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4 · DOCKER HUB  —  login → build → push (alleen op main branch)
+  #
+  # Vereiste GitHub Secrets:
+  #   DOCKERHUB_USERNAME  →  jouw Docker Hub gebruikersnaam
+  #   DOCKERHUB_TOKEN     →  Docker Hub access token
+  #                          (hub.docker.com → Account Settings → Security → New Access Token)
+  # ──────────────────────────────────────────────────────────────────────────
+  docker-hub:
+    name: "4 · Docker Hub push"
+    runs-on: ubuntu-latest
+    needs: blockchain
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            context: ./backend
+            image: osso-backend
+          - service: frontend
+            context: ./frontend
+            image: osso-frontend
+          - service: blockchain
+            context: ./blockchain
+            image: osso-blockchain
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
