@@ -14,7 +14,6 @@ from config import settings
 from database import SessionLocal
 from models import IndexedBid
 from services.kafka_topics import BLOCKCHAIN_BID_CONFIRMED
-from services.kafka_monitor_service import kafka_monitor
 
 logger = logging.getLogger(__name__)
 

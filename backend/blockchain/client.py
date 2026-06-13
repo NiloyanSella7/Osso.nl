@@ -3,7 +3,6 @@ Blockchain client die communiceert met de Solidity smart contracts via web3.py.
 Werkt met zowel een lokale Hardhat-node als het Polygon PoS netwerk.
 """
 import json
-import os
 from pathlib import Path
 
 from web3 import Web3

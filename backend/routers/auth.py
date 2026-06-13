@@ -13,7 +13,6 @@ from models import AuditLog, Makelaar, User
 from schemas import (
     IdinCallbackRequest,
     IdinStartRequest,
-    LoginRequest,
     RegisterRequest,
     TokenResponse,
     UserOut,

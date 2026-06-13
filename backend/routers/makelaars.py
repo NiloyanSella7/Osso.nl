@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Makelaar, User
+from models import Makelaar
 from schemas import MakelaarOut
 
 router = APIRouter(prefix="/api/makelaars", tags=["makelaars"])

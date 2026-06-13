@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from dependencies import get_current_user, require_role
+from dependencies import require_role
 from models import AuditLog, Auction, Property, User
 from schemas import AuctionCreate, AuctionOut, AuctionStatus
 
