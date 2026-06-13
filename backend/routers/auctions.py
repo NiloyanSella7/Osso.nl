@@ -161,7 +161,7 @@ def close_auction(
 
     winner_wallet: str | None = None
     if auction.bids:
-        winning_bid = max(auction.bids, key=lambda b: b.amount_usdc)
+        winning_bid = max(auction.bids, key=lambda b: b.amount_usdc or 0.0)
         winner_wallet = winning_bid.bidder_wallet
 
     auction.status = "closed"
