@@ -121,11 +121,6 @@ jobs:
 
   # ──────────────────────────────────────────────────────────────────────────
   # 4 · DOCKER HUB  —  login → build → push (alleen op main branch)
-  #
-  # Vereiste GitHub Secrets:
-  #   DOCKERHUB_USERNAME  →  jouw Docker Hub gebruikersnaam
-  #   DOCKERHUB_TOKEN     →  Docker Hub access token
-  #                          (hub.docker.com → Account Settings → Security → New Access Token)
   # ──────────────────────────────────────────────────────────────────────────
   docker-hub:
     name: "4 · Docker Hub push"
