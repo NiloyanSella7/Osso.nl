@@ -14,6 +14,7 @@ from config import settings
 ABI_DIR = Path(__file__).parent / "abis"
 
 
+# Laadt het ABI-bestand van een contract op naam, of lege lijst als het niet bestaat
 def _load_abi(name: str) -> list:
     path = ABI_DIR / f"{name}.json"
     if not path.exists():
@@ -22,6 +23,7 @@ def _load_abi(name: str) -> list:
         return json.load(f)
 
 
+# Wrapper rond web3.py voor verbinding en interactie met de smart contracts
 class BlockchainClient:
     def __init__(self):
         self.w3 = Web3(Web3.HTTPProvider(settings.web3_provider_url))
@@ -29,6 +31,7 @@ class BlockchainClient:
         self.w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         self._connected = self.w3.is_connected()
 
+        # Alleen account aanmaken als er een echte private key is geconfigureerd
         if self._connected and settings.backend_wallet_private_key != "0x" + "0" * 64:
             self.account = self.w3.eth.account.from_key(
                 settings.backend_wallet_private_key
@@ -46,6 +49,7 @@ class BlockchainClient:
         self.bid_escrow = self._load_contract("BidEscrow", settings.bid_escrow_address)
         self.kyc_gate = self._load_contract("KYCGate", settings.kyc_gate_address)
 
+    # Laadt een contract-instantie als ABI en adres geldig zijn, anders None
     def _load_contract(self, name: str, address: str):
         abi = _load_abi(name)
         if not abi or address == "0x" + "0" * 40:
@@ -57,6 +61,7 @@ class BlockchainClient:
         """Bouw en verstuurd een transactie namens de backend wallet."""
         if not self.account:
             raise RuntimeError("Backend wallet niet geconfigureerd")
+        # Bouwt, ondertekent en verstuurt de transactie, en wacht op de receipt
         nonce = self.w3.eth.get_transaction_count(self.account.address)
         tx = fn.build_transaction(
             {
@@ -93,6 +98,7 @@ class BlockchainClient:
                 "Backend wallet niet geconfigureerd — controleer BACKEND_WALLET_PRIVATE_KEY in .env"
             )
 
+        # Verstuurt de placeBid-transactie naar de OssoBidRegistry smart contract
         checksum_wallet = Web3.to_checksum_address(bidder_wallet)
         receipt = self._send_tx(
             self.registry.functions.placeBid(
@@ -130,6 +136,7 @@ class BlockchainClient:
         if not self.registry:
             return []
         all_bids = []
+        # Loopt door mogelijke auction ID's en stopt zodra er geen biedingen meer zijn
         for auction_id in range(100):
             try:
                 bids = self.registry.functions.getBids(auction_id).call()
@@ -207,4 +214,5 @@ class BlockchainClient:
         return self._connected
 
 
+# Singleton-instantie die door de rest van de backend wordt gebruikt
 blockchain_client = BlockchainClient()

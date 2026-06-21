@@ -56,6 +56,7 @@ export default function Gebruikersprofiel() {
   const makelaarActiveStep =
     user.status === 'active' ? 1 : 0;
 
+  // Simuleert iDIN-verificatie via mock wallet en callback, en vernieuwt daarna de gebruiker
   const handleIdinStart = async () => {
     setIdinStep('loading');
     setError('');
@@ -76,6 +77,7 @@ export default function Gebruikersprofiel() {
     }
   };
 
+  // Simuleert NVM-goedkeuring voor makelaars en vernieuwt daarna de gebruiker
   const handleNvmApprove = async () => {
     setNvmStep('loading');
     setError('');
@@ -125,6 +127,7 @@ export default function Gebruikersprofiel() {
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {isMakelaar ? (
+                // Toon NVM-status voor makelaars, iDIN-status voor bieders
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography variant="body2" color="text.secondary">NVM-lidmaatschap</Typography>
                   <Chip
@@ -179,6 +182,7 @@ export default function Gebruikersprofiel() {
 
             {isMakelaar ? (
               /* ── Makelaar stepper ── */
+              // Toont onboarding-stappen specifiek voor makelaars (NVM-goedkeuring)
               <>
                 <Stepper activeStep={makelaarActiveStep} orientation="vertical">
                   <Step completed={makelaarActiveStep >= 1}>
@@ -204,6 +208,7 @@ export default function Gebruikersprofiel() {
                         woningen en biedprocessen beheren.
                       </Typography>
 
+                      {/* Toon succesmelding zodra goedkeuring gesimuleerd of al actief is */}
                       {nvmStep === 'done' || user.status === 'active' ? (
                         <Alert severity="success" icon={<CheckCircleIcon />}>
                           NVM-goedkeuring geslaagd. Uw kantoor is actief.
@@ -251,6 +256,7 @@ export default function Gebruikersprofiel() {
               </>
             ) : (
               /* ── Bieder stepper ── */
+              // Toont onboarding-stappen specifiek voor bieders (iDIN-verificatie)
               <>
                 <Stepper activeStep={bidderActiveStep} orientation="vertical">
                   <Step completed={bidderActiveStep >= 1}>
@@ -271,6 +277,7 @@ export default function Gebruikersprofiel() {
                         Verifieer uw identiteit via uw bank. Dit is vereist om te kunnen bieden.
                       </Typography>
 
+                      {/* Toon succesmelding zodra iDIN gesimuleerd of al geverifieerd is */}
                       {idinStep === 'done' || user.idin_verified ? (
                         <Alert severity="success">iDIN-verificatie geslaagd. Uw identiteit is bevestigd.</Alert>
                       ) : (

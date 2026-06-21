@@ -21,16 +21,19 @@ const AppContext = createContext<AppContextType | null>(null);
 
 const MOCK_WALLET = '0xa1b2c3d4e5f6789012345678901234567890abcd';
 
+// bepaalt of gebruiker onboarding mag overslaan: actieve status of rol makelaar/admin
 function isOnboardedUser(user: User): boolean {
   return user.status === 'active' || user.role === 'makelaar' || user.role === 'admin';
 }
 
+// context provider die gebruikers-, sessie- en walletstatus voor de hele app beheert
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
+  // slaat gebruiker op en synchroniseert walletstatus als er een wallet-adres aanwezig is
   const applyUser = (u: User) => {
     setUserState(u);
     if (u.wallet_address) {
@@ -39,6 +42,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // haalt actuele gebruikersgegevens op en logt uit bij een fout (bv. verlopen token)
   const refreshUser = useCallback(async () => {
     if (!api.isLoggedIn()) return;
     try {
@@ -59,6 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshUser]);
 
+  // logt in, haalt gebruiker op en koppelt indien nodig automatisch een mock-wallet
   const login = async (email: string, password: string) => {
     await api.login(email, password);
     const u = await api.getMe();
@@ -74,6 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // wist sessie en wallet-state en verwijdert het opgeslagen token
   const logout = () => {
     api.logout();
     setUserState(null);
@@ -83,6 +89,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setUser = (u: User) => applyUser(u);
 
+  // koppelt een mock-wallet aan de huidige gebruiker (PoC, geen echte blockchain-verbinding)
   const connectWallet = () => {
     setWalletConnected(true);
     setWalletAddress(MOCK_WALLET);
@@ -119,6 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// hook om de AppContext te gebruiken, gooit een fout als er geen provider is
 export function useAppContext() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useAppContext must be used within AppProvider');

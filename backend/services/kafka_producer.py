@@ -8,11 +8,13 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+# Wrapper rond AIOKafkaProducer die berichten naar Kafka-topics publiceert
 class KafkaProducerService:
     def __init__(self):
         self._producer: AIOKafkaProducer | None = None
         self._available = False
 
+    # Start de onderliggende Kafka producer; schakelt zichzelf uit als Kafka niet bereikbaar is
     async def start(self):
         try:
             self._producer = AIOKafkaProducer(
@@ -28,11 +30,13 @@ class KafkaProducerService:
             self._producer = None
             self._available = False
 
+    # Sluit de Kafka producer netjes af
     async def stop(self):
         if self._producer:
             await self._producer.stop()
             self._available = False
 
+    # Stuurt een bericht naar het opgegeven topic en wacht op bevestiging; geeft False terug bij falen
     async def publish(self, topic: str, value: dict, key: str | None = None) -> bool:
         if not self._producer or not self._available:
             return False
@@ -43,6 +47,7 @@ class KafkaProducerService:
             logger.error(f"Kafka publish fout (topic={topic}): {e}")
             return False
 
+    # Geeft aan of de producer succesvol verbonden is met Kafka
     @property
     def available(self) -> bool:
         return self._available

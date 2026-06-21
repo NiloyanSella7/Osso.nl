@@ -21,6 +21,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // valideert het registratieformulier, maakt account aan en logt direct in
   const handleSubmit = async () => {
     setError('');
     if (!fullName || !companyName || !email || !password) {

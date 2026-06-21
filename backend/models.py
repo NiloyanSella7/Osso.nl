@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 
+# Gebruikersaccount: bieder, verkoper, makelaar of admin
 class User(Base):
     __tablename__ = "users"
 
@@ -59,6 +60,7 @@ class User(Base):
     )
 
 
+# Makelaarsbedrijf, optioneel gekoppeld aan een gebruikersaccount
 class Makelaar(Base):
     __tablename__ = "makelaars"
 
@@ -79,6 +81,7 @@ class Makelaar(Base):
     user: Mapped[User | None] = relationship("User", back_populates="makelaar_profile")
 
 
+# Woning die te koop staat en eventueel via veiling wordt verkocht
 class Property(Base):
     __tablename__ = "properties"
 
@@ -113,6 +116,7 @@ class Property(Base):
     )
 
 
+# Afbeelding behorend bij een woning, met sorteervolgorde
 class PropertyImage(Base):
     __tablename__ = "property_images"
 
@@ -126,6 +130,7 @@ class PropertyImage(Base):
     property: Mapped[Property] = relationship("Property", back_populates="images")
 
 
+# Veiling voor één woning, gekoppeld aan een on-chain auction ID
 class Auction(Base):
     __tablename__ = "auctions"
 
@@ -150,6 +155,7 @@ class Auction(Base):
     )
 
 
+# Lokale kopie van een bod dat op de blockchain staat, voor snelle weergave/zoeken
 class IndexedBid(Base):
     __tablename__ = "indexed_bids"
 
@@ -177,6 +183,7 @@ class IndexedBid(Base):
     )
 
 
+# Auditlog van belangrijke acties in het systeem, voor traceerbaarheid
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

@@ -53,18 +53,21 @@ export default function Navbar() {
 
   const isMakelaar = user?.role === 'seller' || user?.role === 'makelaar' || user?.role === 'admin';
   const isAdmin = user?.role === 'admin';
+  // bouwt navigatielinks op basis van rol: admin ziet alles, makelaar/seller mist kafka-monitor, overigen alleen basislinks
   const links = isAdmin
     ? [...NAV_LINKS, SELLER_LINK, BLOCKCHAIN_LINK, KAFKA_MONITOR_LINK]
     : isMakelaar
     ? [...NAV_LINKS, SELLER_LINK, BLOCKCHAIN_LINK]
     : NAV_LINKS;
 
+  // logt gebruiker uit en stuurt terug naar loginpagina
   const handleLogout = () => {
     setAnchorEl(null);
     logout();
     navigate('/login');
   };
 
+  // genereert initialen (max 2 letters) uit de volledige naam voor de avatar
   const initials = user?.full_name
     ? user.full_name
         .split(' ')

@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/makelaars", tags=["makelaars"])
 
 @router.get("/", response_model=list[MakelaarOut])
 def list_makelaars(db: Annotated[Session, Depends(get_db)]):
+    # geeft alle makelaars terug
     return db.query(Makelaar).all()
 
 
@@ -19,6 +20,7 @@ def list_makelaars(db: Annotated[Session, Depends(get_db)]):
 def get_makelaar(makelaar_id: int, db: Annotated[Session, Depends(get_db)]):
     from fastapi import HTTPException
 
+    # haalt één makelaar op via het id
     m = db.get(Makelaar, makelaar_id)
     if not m:
         raise HTTPException(status_code=404, detail="Makelaar niet gevonden")

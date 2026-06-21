@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 async def run_blockchain_transaction_service() -> None:
     consumer: AIOKafkaConsumer | None = None
     try:
+        # Zet de Kafka consumer op die luistert naar nieuwe biedingen om te verwerken
         consumer = AIOKafkaConsumer(
             BLOCKCHAIN_BID_SUBMIT,
             bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -42,6 +43,7 @@ async def run_blockchain_transaction_service() -> None:
         return
 
     try:
+        # Verwerkt elk binnenkomend bod-bericht één voor één
         async for msg in consumer:
             data: dict = msg.value
             bid_key: str = data.get("bid_key", "")
@@ -57,6 +59,7 @@ async def run_blockchain_transaction_service() -> None:
             try:
                 from blockchain.client import blockchain_client
 
+                # Plaatst het bod op de blockchain in een aparte thread (blocking web3-call)
                 chain_result: dict = await asyncio.to_thread(
                     blockchain_client.place_bid,
                     auction_id=auction_id,
@@ -76,11 +79,13 @@ async def run_blockchain_transaction_service() -> None:
                     "block_number": block_number,
                 }
 
+                # Publiceert de bevestiging naar Kafka zodat de Event Indexer deze kan opslaan
                 await kafka_producer.publish(
                     BLOCKCHAIN_BID_CONFIRMED, confirmed, key=bid_key
                 )
                 kafka_monitor.record(BLOCKCHAIN_BID_CONFIRMED, confirmed)
 
+                # Maakt de wachtende request (via asyncio.Event) los met het resultaat
                 pending_bids.resolve(
                     bid_key, {"tx_hash": tx_hash, "block_number": block_number}
                 )
@@ -91,6 +96,7 @@ async def run_blockchain_transaction_service() -> None:
             except Exception as e:
                 logger.error(f"Blockchain tx mislukt voor bid_key={bid_key[:8]}…: {e}")
                 error_msg = str(e)
+                # Geeft de fout door aan de wachtende request zodat deze niet blijft hangen
                 pending_bids.resolve(bid_key, {"error": error_msg})
                 kafka_monitor.record(
                     BLOCKCHAIN_BID_CONFIRMED,

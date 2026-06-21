@@ -13,6 +13,7 @@ pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def run_seed():
     db = SessionLocal()
     try:
+        # Maakt de drie initiële gebruikers aan (admin + twee makelaars)
         niloyan = User(
             email="niloyan@osso.nl",
             full_name="Niloyan Sellathurai",
@@ -38,8 +39,9 @@ def run_seed():
             idin_verified=True,
         )
         db.add_all([niloyan, lars, louis])
-        db.flush()
+        db.flush()  # Schrijft de users weg zodat hun id's beschikbaar zijn voor de foreign keys
 
+        # Koppelt de twee makelaar-users aan een Makelaar-record
         db.add(
             Makelaar(
                 user_id=lars.id,

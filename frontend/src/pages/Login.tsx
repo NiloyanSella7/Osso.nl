@@ -28,6 +28,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Logt de gebruiker in en navigeert daarna naar de homepage
   const handleLogin = async () => {
     setError('');
     setLoading(true);
@@ -42,6 +43,7 @@ export default function Login() {
     }
   };
 
+  // Laat inloggen toe met de Enter-toets
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleLogin();
   };
@@ -186,6 +188,7 @@ export default function Login() {
               </Button>
             </Box>
 
+            {/* Registratielink alleen tonen voor makelaars */}
             {isMakelaar && (
               <>
                 <Divider sx={{ my: 3 }} />

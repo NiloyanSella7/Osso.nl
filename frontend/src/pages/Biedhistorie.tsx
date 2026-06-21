@@ -42,6 +42,7 @@ export default function Biedhistorie() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Haalt veiling, biedingen en woninggegevens op zodra de auctionId verandert
   useEffect(() => {
     if (!auctionId) return;
     const id = Number(auctionId);
@@ -76,12 +77,15 @@ export default function Biedhistorie() {
     );
   }
 
+  // Veiling is gesloten zodra de deadline verstreken is of de status niet 'open' is
   const deadlinePassed = new Date(auction.deadline).getTime() < Date.now();
   const isClosed = auction.status !== 'open' || deadlinePassed;
 
+  // Sorteert biedingen op bedrag, hoogste eerst, voor de top 3
   const sortedByAmount = [...bids].sort((a, b) => (b.amount_usdc ?? 0) - (a.amount_usdc ?? 0));
   const top3 = sortedByAmount.slice(0, 3);
 
+  // Sorteert biedingen op tijdstip, meest recent eerst, voor de volledige tabel
   const sortedByTime = [...bids].sort(
     (a, b) => new Date(b.indexed_at).getTime() - new Date(a.indexed_at).getTime()
   );
@@ -127,6 +131,7 @@ export default function Biedhistorie() {
               Hoogste bod
             </Typography>
             {isClosed ? (
+              // Toon het hoogste bod alleen als de biedperiode gesloten is
               <Typography variant="h5" sx={{ fontWeight: 700, color: 'secondary.dark' }}>
                 {bids.length > 0 && bids.some((b) => b.amount_usdc != null)
                   ? `€ ${Math.max(...bids.map((b) => b.amount_usdc ?? 0)).toLocaleString('nl-NL')}`
@@ -236,6 +241,7 @@ export default function Biedhistorie() {
                       <Typography variant="body2">{bid.bidder_phone}</Typography>
                     </Box>
                   )}
+                  {/* Toon voorbehoud financiering alleen als deze waarde bekend is */}
                   {bid.financing_condition !== undefined && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                       <AccountBalanceIcon fontSize="small" color="action" />
@@ -288,6 +294,7 @@ export default function Biedhistorie() {
                 </TableHead>
                 <TableBody>
                   {sortedByTime.map((bid, idx) => {
+                    // Bepaalt de rangpositie op bedrag om top-3 biedingen visueel te markeren
                     const rank = sortedByAmount.findIndex((b) => b.id === bid.id) + 1;
                     const isTop3 = rank <= 3;
                     return (

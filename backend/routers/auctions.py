@@ -41,6 +41,7 @@ def _auction_out(auction: Auction, db: Session | None = None) -> AuctionOut:
 
 @router.get("/", response_model=list[AuctionOut])
 def list_auctions(db: Annotated[Session, Depends(get_db)]):
+    # haalt alle veilingen op inclusief biedingen
     auctions = db.query(Auction).options(joinedload(Auction.bids)).all()
     return [_auction_out(a, db) for a in auctions]
 
@@ -60,6 +61,7 @@ def get_auction(auction_id: int, db: Annotated[Session, Depends(get_db)]):
 
 @router.get("/{auction_id}/status", response_model=AuctionStatus)
 def get_auction_status(auction_id: int, db: Annotated[Session, Depends(get_db)]):
+    # geeft compacte statusinformatie van een veiling terug (zonder volledige biedlijst)
     auction = (
         db.query(Auction)
         .options(joinedload(Auction.bids))
@@ -83,15 +85,18 @@ def create_auction(
     current_user: Annotated[User, Depends(require_role("seller", "makelaar", "admin"))],
     db: Annotated[Session, Depends(get_db)],
 ):
+    # maakt een nieuwe veiling aan voor een bestaande woning
     prop = db.get(Property, body.property_id)
     if not prop:
         raise HTTPException(status_code=404, detail="Woning niet gevonden")
 
+    # voorkomt dat er twee veilingen tegelijk lopen voor dezelfde woning
     if db.query(Auction).filter(Auction.property_id == body.property_id).first():
         raise HTTPException(
             status_code=400, detail="Er is al een veiling actief voor deze woning"
         )
 
+    # valideert dat de deadline na de startdatum ligt
     if body.deadline <= body.start_date:
         raise HTTPException(
             status_code=422, detail="Deadline moet na de startdatum liggen"
@@ -156,18 +161,21 @@ def close_auction(
     if auction.status != "open":
         raise HTTPException(status_code=400, detail="Veiling is al gesloten")
 
+    # valideert dat de deadline al verstreken is voordat de veiling gesloten mag worden
     if datetime.now() < auction.deadline:
         raise HTTPException(status_code=400, detail="Deadline is nog niet verstreken")
 
+    # bepaalt de winnaar als het bod met het hoogste bedrag
     winner_wallet: str | None = None
     if auction.bids:
         winning_bid = max(auction.bids, key=lambda b: b.amount_usdc or 0.0)
         winner_wallet = winning_bid.bidder_wallet
 
+    # statusovergang van open naar closed
     auction.status = "closed"
     auction.winner_wallet = winner_wallet
 
-    # Probeer op blockchain te sluiten
+    # sluit de veiling ook op de blockchain
     try:
         from blockchain.client import blockchain_client
 

@@ -21,8 +21,8 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   idin_verified: boolean;
-  assigned_property_id?: number;
-  registered_by?: number;
+  assigned_property_id?: number; // woning waaraan deze gebruiker (bv. bieder) is toegewezen
+  registered_by?: number; // id van de gebruiker die deze account heeft aangemaakt/uitgenodigd
   verified_at?: string;
   created_at: string;
 }
@@ -47,7 +47,7 @@ export interface Property {
 export interface Auction {
   id: number;
   property_id: number;
-  contract_auction_id?: number;
+  contract_auction_id?: number; // id van de bijbehorende veiling in het smart contract
   start_date: string;
   deadline: string;
   status: AuctionStatus;
@@ -59,12 +59,12 @@ export interface Bid {
   id: number;
   auction_id: number;
   bidder_wallet: string;
-  amount_usdc: number;
-  tx_hash: string;
+  amount_usdc: number; // biedbedrag in USDC (stablecoin)
+  tx_hash: string; // hash van de blockchain-transactie
   block_number: number;
   indexed_at: string;
   bidder_name?: string;
   bidder_email?: string;
   bidder_phone?: string;
-  financing_condition?: boolean;
+  financing_condition?: boolean; // of het bod afhankelijk is van financiering
 }

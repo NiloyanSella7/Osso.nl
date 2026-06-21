@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _require_admin(token: str) -> User:
+    # decodeert het JWT-token en valideert dat de gebruiker admin is
     db = SessionLocal()
     try:
         payload = jwt.decode(
@@ -34,6 +35,7 @@ def _require_admin(token: str) -> User:
 
 @router.get("/messages")
 def get_messages(limit: int = 100, token: str = Query(...)):
+    # geeft recente Kafka-berichten en statistieken terug, alleen voor admins
     try:
         _require_admin(token)
     except ValueError as e:
@@ -46,6 +48,7 @@ def get_messages(limit: int = 100, token: str = Query(...)):
 
 @router.websocket("/ws")
 async def kafka_ws(websocket: WebSocket, token: str = Query(...)):
+    # streamt live Kafka-berichten naar de admin via een websocket
     try:
         _require_admin(token)
     except ValueError:
@@ -55,6 +58,7 @@ async def kafka_ws(websocket: WebSocket, token: str = Query(...)):
     await websocket.accept()
     queue = kafka_monitor.subscribe()
 
+    # stuurt eerst de recente geschiedenis naar de nieuwe verbinding
     for msg in kafka_monitor.get_recent(50):
         try:
             await websocket.send_json(msg)
@@ -65,6 +69,7 @@ async def kafka_ws(websocket: WebSocket, token: str = Query(...)):
     try:
         while True:
             try:
+                # wacht op nieuwe berichten, stuurt heartbeat bij timeout
                 msg = await asyncio.wait_for(queue.get(), timeout=20)
                 await websocket.send_json(msg)
             except asyncio.TimeoutError:

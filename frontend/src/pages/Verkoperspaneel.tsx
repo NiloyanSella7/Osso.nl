@@ -107,6 +107,7 @@ export default function Verkoperspaneel() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [copied, setCopied] = useState<'email' | 'password' | null>(null);
 
+  // haalt woningen en biedprocessen tegelijk op bij het laden van de pagina
   useEffect(() => {
     Promise.all([api.getProperties(), api.getAuctions()])
       .then(([props, aucts]) => {
@@ -116,6 +117,7 @@ export default function Verkoperspaneel() {
       .finally(() => setDataLoading(false));
   }, []);
 
+  // blokkeert toegang voor gebruikers zonder verkoper-, makelaar- of adminrol
   if (!user || (user.role !== 'seller' && user.role !== 'makelaar' && user.role !== 'admin')) {
     return (
       <Box>
@@ -127,6 +129,7 @@ export default function Verkoperspaneel() {
     );
   }
 
+  // toont wachtscherm zolang het makelaarskantoor nog niet door de NVM is goedgekeurd
   if (user.status === 'invited') {
     return (
       <Box>
@@ -147,10 +150,12 @@ export default function Verkoperspaneel() {
 
   const getAuction = (propertyId: number) => auctions.find((a) => a.property_id === propertyId);
 
+  // verstuurt het woningformulier naar de API en voegt de nieuwe woning toe aan de lijst
   const handlePropertySubmit = async () => {
     setPropertyError('');
     setPropertyLoading(true);
     try {
+      // filtert lege foto-URL's eruit voordat ze verstuurd worden
       const images = [propertyForm.image1, propertyForm.image2, propertyForm.image3]
         .map((u) => u.trim())
         .filter(Boolean);
@@ -177,6 +182,7 @@ export default function Verkoperspaneel() {
     }
   };
 
+  // start een nieuw biedproces voor de geselecteerde woning met de ingestelde periode
   const handleAuctionSubmit = async () => {
     setAuctionError('');
     setAuctionLoading(true);
@@ -197,6 +203,7 @@ export default function Verkoperspaneel() {
     }
   };
 
+  // stuurt de uitnodiging naar de bieder en toont de aangemaakte inloggegevens
   const handleInviteSubmit = async () => {
     setInviteDialogOpen(false);
     setInviteError('');
@@ -216,6 +223,7 @@ export default function Verkoperspaneel() {
     }
   };
 
+  // kopieert tekst naar het klembord en toont kort een bevestiging
   const handleCopy = (type: 'email' | 'password', value: string) => {
     navigator.clipboard.writeText(value);
     setCopied(type);
@@ -277,7 +285,9 @@ export default function Verkoperspaneel() {
               <TableBody>
                 {properties.map((property) => {
                   const auction = getAuction(property.id);
+                  // controleert of de biedperiode al verstreken is
                   const deadlinePassed = auction ? new Date(auction.deadline) < new Date() : false;
+                  // toont biedproces als gesloten zodra de deadline voorbij is, ook als status nog "open" is
                   const effectiveStatus = auction
                     ? (auction.status === 'open' && deadlinePassed ? 'closed' : auction.status)
                     : null;
@@ -606,6 +616,7 @@ export default function Verkoperspaneel() {
               <Alert severity="error" sx={{ mb: 2 }}>{inviteError}</Alert>
             )}
 
+            {/* toont inloggegevens na succesvolle uitnodiging, anders het uitnodigingsformulier */}
             {inviteSuccess ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* Succesbanner */}

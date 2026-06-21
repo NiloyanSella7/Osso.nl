@@ -43,9 +43,11 @@ async def run_event_indexer() -> None:
         return
 
     try:
+        # Verwerkt elk binnenkomend bevestigingsbericht één voor één
         async for msg in consumer:
             data: dict = msg.value
 
+            # Slaat mislukte transacties over, deze worden niet geïndexeerd
             if data.get("status") == "failed" or "error" in data:
                 logger.warning(
                     f"Mislukte transactie ontvangen, niet geïndexeerd: {data}"
@@ -65,6 +67,7 @@ async def run_event_indexer() -> None:
                 if db.query(IndexedBid).filter(IndexedBid.tx_hash == tx_hash).first():
                     continue  # Al geïndexeerd door de Bids Router
 
+                # Schrijft het bevestigde bod weg als leescache in MySQL
                 bid = IndexedBid(
                     auction_id=auction_id,
                     bidder_wallet=bidder_wallet.lower(),

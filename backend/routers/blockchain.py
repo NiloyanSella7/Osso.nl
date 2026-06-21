@@ -19,6 +19,7 @@ def blockchain_feed(
     Live blockchain-feed: alle geïndexeerde biedingen gesorteerd op tijdstip.
     Bedragen worden NOOIT meegestuurd — alleen metadata.
     """
+    # haalt de meest recente geïndexeerde biedingen op met gekoppelde veiling en woning
     bids = (
         db.query(IndexedBid)
         .join(Auction, IndexedBid.auction_id == Auction.id)

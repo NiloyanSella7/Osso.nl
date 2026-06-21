@@ -26,6 +26,7 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
 
+    # haalt geïndexeerde biedingen op uit MySQL, gesorteerd op tijdstip
     indexed = (
         db.query(IndexedBid)
         .filter(IndexedBid.auction_id == auction_id)
@@ -35,6 +36,7 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
 
     deadline_passed = datetime.now() > auction.deadline
 
+    # na de deadline mogen de echte bedragen van de blockchain opgehaald worden
     if deadline_passed and indexed:
         try:
             from blockchain.client import blockchain_client
@@ -76,6 +78,7 @@ async def place_bid(
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
     if auction.status != "open":
         raise HTTPException(status_code=400, detail="Biedperiode is gesloten")
+    # valideert dat de deadline nog niet verstreken is voordat een bod wordt geaccepteerd
     if datetime.now() > auction.deadline:
         raise HTTPException(status_code=400, detail="De bieddeadline is verstreken")
 
@@ -90,6 +93,7 @@ async def place_bid(
     if body.amount_usdc <= 0:
         raise HTTPException(status_code=400, detail="Bod-bedrag moet positief zijn")
 
+    # voorkomt dat een bieder twee keer bidt op dezelfde woning
     existing_bid = (
         db.query(IndexedBid)
         .filter(
@@ -115,6 +119,7 @@ async def place_bid(
         "financing_condition": body.financing_condition,
     }
 
+    # registreert een wacht-event en publiceert het bod naar Kafka
     event = pending_bids.create(bid_key)
     published = await kafka_producer.publish(
         BLOCKCHAIN_BID_SUBMIT, bid_data, key=bid_key
@@ -152,6 +157,7 @@ async def place_bid(
             try:
                 from blockchain.client import blockchain_client
 
+                # voert het bod direct op de blockchain uit zonder Kafka
                 chain_result = await asyncio.to_thread(
                     blockchain_client.place_bid,
                     auction_id=auction_id,
@@ -212,6 +218,7 @@ def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     if not auction:
         raise HTTPException(status_code=404, detail="Veiling niet gevonden")
 
+    # haalt de lokaal geïndexeerde biedingen op om te vergelijken met de blockchain
     indexed = (
         db.query(IndexedBid)
         .filter(IndexedBid.auction_id == auction_id)
@@ -223,6 +230,7 @@ def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     try:
         from blockchain.client import blockchain_client
 
+        # haalt de daadwerkelijke biedingen direct van de blockchain op
         raw = blockchain_client.get_registry_bids(auction_id)
         on_chain_bids = [
             BlockchainBid(
@@ -236,6 +244,7 @@ def verify_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
     except Exception:
         pass
 
+    # vergelijkt aantallen om te controleren of de index overeenkomt met de blockchain
     match = len(indexed) == len(on_chain_bids)
 
     return VerifyResponse(

@@ -31,6 +31,7 @@ def update_me(
     if body.full_name is not None:
         current_user.full_name = body.full_name
     if body.wallet_address is not None:
+        # valideert dat het wallet-adres nog niet door een andere gebruiker gebruikt wordt
         existing = (
             db.query(User)
             .filter(
@@ -42,6 +43,7 @@ def update_me(
         if existing:
             raise HTTPException(status_code=400, detail="Wallet-adres al in gebruik")
         current_user.wallet_address = body.wallet_address.lower()
+        # statusovergang van verified naar active zodra een wallet gekoppeld is
         if current_user.status == "verified":
             current_user.status = "active"
 
@@ -56,6 +58,7 @@ def get_user(
     current_user: Annotated[User, Depends(require_role("makelaar", "admin"))],
     db: Annotated[Session, Depends(get_db)],
 ):
+    # haalt een gebruiker op via het id, alleen toegankelijk voor makelaar/admin
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Gebruiker niet gevonden")
@@ -72,6 +75,7 @@ def invite_bidder(
     Makelaar nodigt een bieder uit. De bieder ontvangt een uitnodigingslink
     en krijgt status 'invited' totdat iDIN-verificatie is voltooid.
     """
+    # valideert dat het e-mailadres nog niet geregistreerd is
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="E-mailadres is al geregistreerd")
@@ -81,6 +85,7 @@ def invite_bidder(
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     temp_password = "Bieden123@"
 
+    # maakt een nieuwe bieder-account aan met status 'invited'
     new_user = User(
         email=body.email,
         full_name=body.full_name,
@@ -117,4 +122,5 @@ def list_users(
     current_user: Annotated[User, Depends(require_role("makelaar", "admin"))],
     db: Annotated[Session, Depends(get_db)],
 ):
+    # geeft alle gebruikers terug, alleen toegankelijk voor makelaar/admin
     return db.query(User).all()

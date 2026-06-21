@@ -41,6 +41,7 @@ import { useAppContext } from '../lib/AppContext';
 import * as api from '../lib/api';
 import type { Property, Auction } from '../types';
 
+// formatteert de deadline als leesbare Nederlandse datum/tijd
 function formatDeadline(deadline: string) {
   return new Date(deadline).toLocaleDateString('nl-NL', {
     day: 'numeric',
@@ -51,6 +52,7 @@ function formatDeadline(deadline: string) {
   });
 }
 
+// berekent de resterende tijd tot de deadline in dagen en uren
 function timeUntil(deadline: string): string {
   const diff = new Date(deadline).getTime() - Date.now();
   if (diff <= 0) return 'Verlopen';
@@ -79,6 +81,7 @@ export default function WoningDetail() {
   const [bidError, setBidError] = useState('');
   const [alreadyBid, setAlreadyBid] = useState(false);
 
+  // laadt woning- en veilinggegevens en controleert of de gebruiker al heeft geboden
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -124,6 +127,7 @@ export default function WoningDetail() {
 
   const isMakelaar = user?.role === 'makelaar' || user?.role === 'seller' || user?.role === 'admin';
 
+  // alleen actieve, iDIN-geverifieerde bieders mogen bieden op een open biedproces
   const canBid =
     !isMakelaar &&
     user?.status === 'active' &&
@@ -132,6 +136,7 @@ export default function WoningDetail() {
 
   const bidSteps = ['Bod verwerken', 'Bod valideren', 'Bod geregistreerd'];
 
+  // doorloopt de stappen van het bod plaatsen en registreert het bod via de API
   const handleBidSubmit = async () => {
     setConfirmOpen(false);
     setBidError('');
@@ -322,7 +327,7 @@ export default function WoningDetail() {
             </CardContent>
           </Card>
 
-          {/* Geen biedproces */}
+          {/* Geen biedproces - toont melding aan bieders als er nog geen veiling is gestart */}
           {!auction && !isMakelaar && (
             <Card sx={{ mb: 2 }}>
               <CardContent>
@@ -344,6 +349,7 @@ export default function WoningDetail() {
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="h6">Biedperiode</Typography>
+                  {/* toont "Open" alleen als status open is én de deadline nog niet verstreken is */}
                   <Chip
                     label={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'Open' : 'Gesloten'}
                     color={auction.status === 'open' && new Date(auction.deadline) > new Date() ? 'success' : 'default'}
@@ -382,7 +388,7 @@ export default function WoningDetail() {
             </Card>
           )}
 
-          {/* Al geboden melding */}
+          {/* Al geboden melding - per bieder is maar één bod toegestaan */}
           {auction?.status === 'open' && !isMakelaar && alreadyBid && (
             <Card sx={{ mb: 2 }}>
               <CardContent>
@@ -406,6 +412,7 @@ export default function WoningDetail() {
                   Bod uitbrengen
                 </Typography>
 
+                {/* toont resultaat, voortgang of formulier afhankelijk van de status van het bod */}
                 {bidSubmitted ? (
                   <Alert severity="success" icon={<VerifiedIcon />}>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -429,6 +436,7 @@ export default function WoningDetail() {
                     </Stepper>
                   </Box>
                 ) : !canBid ? (
+                  // legt uit waarom de gebruiker nog niet kan bieden (geen iDIN of nog niet geverifieerd)
                   <Box>
                     {bidError && <Alert severity="error" sx={{ mb: 1 }}>{bidError}</Alert>}
                     {!user?.idin_verified && (
@@ -486,6 +494,7 @@ export default function WoningDetail() {
                       variant="contained"
                       size="large"
                       fullWidth
+                      // schakelt knop pas in als bedrag positief is en financieringsvoorwaarde gekozen is
                       disabled={!bidAmount || Number(bidAmount) <= 0 || financingCondition === null}
                       onClick={() => setConfirmOpen(true)}
                       startIcon={<GavelIcon />}

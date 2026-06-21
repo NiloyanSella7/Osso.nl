@@ -41,6 +41,7 @@ app.include_router(blockchain.router)
 app.include_router(kafka_monitor_router)
 
 
+# Initialiseert database, seed-data en achtergrondservices bij het opstarten van de app
 @app.on_event("startup")
 async def startup():
     import models  # noqa: F401
@@ -51,6 +52,7 @@ async def startup():
     asyncio.create_task(_start_kafka_services())
 
 
+# Vult de database met seed-data als de users-tabel nog leeg is
 def _run_seed_if_empty():
     from sqlalchemy import text
     from database import SessionLocal
@@ -70,6 +72,7 @@ def _run_seed_if_empty():
         db.close()
 
 
+# Verwijdert geïndexeerde biedingen uit de database als de blockchain leeg/gereset is
 def _clear_stale_bids_if_blockchain_reset():
     from database import SessionLocal
     from models import IndexedBid
@@ -82,6 +85,7 @@ def _clear_stale_bids_if_blockchain_reset():
         from blockchain.client import blockchain_client
 
         chain_bids = blockchain_client.get_all_bids()
+        # Geen biedingen meer op de chain, maar wel lokaal geïndexeerd: blockchain is gereset
         if len(chain_bids) == 0:
             deleted = db.query(IndexedBid).delete()
             db.commit()
@@ -95,6 +99,7 @@ def _clear_stale_bids_if_blockchain_reset():
         db.close()
 
 
+# Start de Kafka-producer en start daarna de afhankelijke achtergrondservices
 async def _start_kafka_services():
     from services.kafka_producer import kafka_producer
 
@@ -109,6 +114,7 @@ async def _start_kafka_services():
         )
 
 
+# Start de service die Kafka-berichten omzet in blockchain-transacties
 async def _run_blockchain_transaction_service():
     try:
         from services.blockchain_transaction_service import (
@@ -120,6 +126,7 @@ async def _run_blockchain_transaction_service():
         logger.error(f"Blockchain Transaction Service crashte: {e}")
 
 
+# Start de service die blockchain-events indexeert in de database
 async def _run_event_indexer():
     try:
         from services.event_indexer import run_event_indexer
@@ -129,6 +136,7 @@ async def _run_event_indexer():
         logger.error(f"Event Indexer crashte: {e}")
 
 
+# Stopt de Kafka-producer netjes bij het afsluiten van de app
 @app.on_event("shutdown")
 async def shutdown():
     from services.kafka_producer import kafka_producer
@@ -137,6 +145,7 @@ async def shutdown():
     logger.info("Kafka producer gestopt")
 
 
+# Healthcheck-endpoint dat de status van blockchain- en Kafka-verbinding teruggeeft
 @app.get("/api/health")
 def health():
     try:
@@ -156,6 +165,7 @@ def health():
     }
 
 
+# Geeft gedetailleerde status van de blockchain-verbinding en contractadressen terug
 @app.get("/api/blockchain/status")
 def blockchain_status():
     try:

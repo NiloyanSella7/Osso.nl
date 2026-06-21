@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/properties", tags=["properties"])
 def _build_property_out(
     prop: Property, makelaar: Makelaar | None = None
 ) -> PropertyOut:
+    # sorteert de afbeeldingen op volgorde voordat de woning wordt geserialiseerd
     images = [img.url for img in sorted(prop.images, key=lambda i: i.sort_order)]
     return PropertyOut(
         id=prop.id,
@@ -34,6 +35,7 @@ def _build_property_out(
 
 
 def _get_makelaar_for_seller(db, seller_id: int) -> Makelaar | None:
+    # zoekt de makelaar die aan een verkoper gekoppeld is
     return db.query(Makelaar).filter(Makelaar.user_id == seller_id).first()
 
 
@@ -42,6 +44,7 @@ def list_properties(
     db: Annotated[Session, Depends(get_db)],
     status_filter: str | None = None,
 ):
+    # haalt woningen op inclusief afbeeldingen en veiling, optioneel gefilterd op status
     q = db.query(Property).options(
         joinedload(Property.images), joinedload(Property.auction)
     )
@@ -76,6 +79,7 @@ def create_property(
     current_user: Annotated[User, Depends(require_role("seller", "makelaar", "admin"))],
     db: Annotated[Session, Depends(get_db)],
 ):
+    # maakt een nieuwe woning aan met status 'draft'
     prop = Property(
         seller_id=current_user.id,
         address=body.address,
@@ -91,6 +95,7 @@ def create_property(
     db.add(prop)
     db.flush()
 
+    # slaat de afbeeldingen op met behoud van hun volgorde
     for idx, url in enumerate(body.images):
         db.add(PropertyImage(property_id=prop.id, url=url, sort_order=idx))
 
@@ -120,12 +125,14 @@ def update_property(
     if not prop:
         raise HTTPException(status_code=404, detail="Woning niet gevonden")
 
+    # valideert dat alleen de eigenaar, makelaar of admin de woning mag wijzigen
     if (
         current_user.role not in ("makelaar", "admin")
         and prop.seller_id != current_user.id
     ):
         raise HTTPException(status_code=403, detail="Geen toegang tot deze woning")
 
+    # past alleen de meegegeven velden aan
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(prop, field, value)
 
@@ -143,5 +150,6 @@ def delete_property(
     prop = db.get(Property, property_id)
     if not prop:
         raise HTTPException(status_code=404, detail="Woning niet gevonden")
+    # verwijdert de woning permanent uit de database
     db.delete(prop)
     db.commit()

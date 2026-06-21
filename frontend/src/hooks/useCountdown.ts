@@ -10,6 +10,7 @@ interface CountdownResult {
   urgent: boolean;
 }
 
+// berekent het verschil tussen nu en de deadline en zet dit om naar dagen/uren/minuten/seconden plus een leesbaar label
 function compute(deadline: string): CountdownResult {
   const diff = new Date(deadline).getTime() - Date.now();
   if (diff <= 0) {
@@ -19,6 +20,7 @@ function compute(deadline: string): CountdownResult {
   const hours = Math.floor((diff % 86400000) / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
+  // minder dan 24 uur over wordt als urgent gemarkeerd
   const urgent = diff < 86400000;
 
   let label: string;
@@ -33,6 +35,7 @@ function compute(deadline: string): CountdownResult {
   return { days, hours, minutes, seconds, expired: false, label, urgent };
 }
 
+// herberekent de resterende tijd elke seconde totdat de deadline verstreken is
 export function useCountdown(deadline: string): CountdownResult {
   const [result, setResult] = useState(() => compute(deadline));
 

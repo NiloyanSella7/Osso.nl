@@ -33,6 +33,7 @@ def _verify_password(plain: str, hashed: str) -> bool:
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
+    # valideert dat het e-mailadres nog niet geregistreerd is
     if db.query(User).filter(User.email == body.email).first():
         raise HTTPException(status_code=400, detail="E-mailadres is al in gebruik")
 
@@ -61,6 +62,7 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
 
     # Makelaar-profiel aanmaken
     if body.role == "makelaar":
+        # genereert initialen uit de eerste twee woorden van de naam voor het logo
         initials = "".join(w[0].upper() for w in body.full_name.split()[:2])
         makelaar = Makelaar(
             user_id=user.id,
@@ -92,6 +94,7 @@ def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)],
 ):
+    # zoekt gebruiker op e-mailadres en verifieert het wachtwoord
     user = db.query(User).filter(User.email == form_data.username).first()
     if (
         not user
@@ -103,6 +106,7 @@ def login(
             detail="Onjuist e-mailadres of wachtwoord",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # genereert een JWT-toegangstoken voor de gebruiker
     token = create_access_token({"sub": str(user.id), "role": user.role})
     db.add(
         AuditLog(
@@ -128,6 +132,7 @@ def idin_start(
     """
     from config import settings
 
+    # blokkeert deze flow als productie-iDIN nog niet ondersteund wordt
     if not settings.idin_mock:
         raise HTTPException(
             status_code=501, detail="iDIN productie-integratie nog niet geïmplementeerd"
@@ -152,6 +157,7 @@ def idin_callback(
     Verwerkt de iDIN-callback na succesvolle identiteitsverificatie.
     Slaat de SHA-256 hash van de iDIN-identifier op en whitelists het wallet-adres.
     """
+    # hasht de iDIN-identifier zodat het origineel niet opgeslagen wordt
     idin_hash = hashlib.sha256(body.idin_identifier.encode()).hexdigest()
 
     current_user.idin_hash = idin_hash
@@ -169,7 +175,7 @@ def idin_callback(
     db.commit()
     db.refresh(current_user)
 
-    # Probeer wallet op KYCGate whitelist te zetten
+    # zet het wallet-adres op de KYCGate whitelist op de blockchain
     if current_user.wallet_address:
         try:
             from blockchain.client import blockchain_client
@@ -198,6 +204,7 @@ def idin_mock_callback(user_id: int, db: Annotated[Session, Depends(get_db)]):
     """Mock iDIN-callback pagina — alleen beschikbaar in PoC-modus."""
     from config import settings
 
+    # endpoint alleen bruikbaar in mock-modus
     if not settings.idin_mock:
         raise HTTPException(status_code=404)
 
@@ -226,6 +233,7 @@ def nvm_approve(
     Mock NVM-goedkeuring voor makelaars.
     In productie zou dit door een NVM-medewerker worden geactiveerd.
     """
+    # valideert dat alleen makelaars en verkopers goedkeuring kunnen aanvragen
     if current_user.role not in ("makelaar", "seller"):
         raise HTTPException(
             status_code=400, detail="Alleen makelaars kunnen NVM-goedkeuring aanvragen"
@@ -234,6 +242,7 @@ def nvm_approve(
     if current_user.status == "active":
         return {"message": "Account is al goedgekeurd", "status": "active"}
 
+    # statusovergang naar active na goedkeuring
     current_user.status = "active"
     current_user.verified_at = datetime.now(timezone.utc)
 

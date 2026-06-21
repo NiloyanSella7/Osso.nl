@@ -24,6 +24,7 @@ function BidderView() {
   const [auction, setAuction] = useState<Auction | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // laadt de aan de bieder toegewezen woning en het bijbehorende biedproces
   useEffect(() => {
     if (!user?.assigned_property_id) { setLoading(false); return; }
     Promise.all([
@@ -35,6 +36,7 @@ function BidderView() {
     }).finally(() => setLoading(false));
   }, [user?.assigned_property_id]);
 
+  // controleert of de toegewezen woning overeenkomt met de zoekterm
   const matchesSearch =
     !search ||
     property?.address.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,7 +52,7 @@ function BidderView() {
 
   return (
     <Box sx={{ minHeight: 'calc(100vh - 64px)', bgcolor: '#EBF3FA', mx: -4, px: 4, pt: 4, pb: 8 }}>
-      {/* Makelaar hero */}
+      {/* Makelaar hero - toont alleen als de woning een makelaar heeft */}
       {property?.makelaar && (
         <Box sx={{ bgcolor: 'white', borderRadius: 2.5, p: { xs: 3, md: 4 }, mb: 4, border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
           <Avatar sx={{ width: 72, height: 72, bgcolor: property.makelaar.logo_color, fontSize: '1.1rem', fontWeight: 800, flexShrink: 0 }}>
@@ -85,6 +87,7 @@ function BidderView() {
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* toont dossier alleen als woning bestaat en aan de zoekterm voldoet */}
         {property && matchesSearch ? (
           <DossierCard property={property} auction={auction ?? undefined} makelaar={property.makelaar ?? undefined} />
         ) : (
@@ -115,6 +118,7 @@ function MakelaarView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // haalt alle woningen en biedprocessen op voor het overzicht
   useEffect(() => {
     Promise.all([api.getProperties(), api.getAuctions()])
       .then(([props, aucts]) => { setProperties(props); setAuctions(aucts); })
@@ -124,6 +128,7 @@ function MakelaarView() {
 
   const getAuction = (propertyId: number) => auctions.find((a) => a.property_id === propertyId);
 
+  // filtert woningen op zoekterm en op biedstatus (open/gesloten/alle)
   const filtered = properties.filter((p) => {
     const matchesSearch =
       p.address.toLowerCase().includes(search.toLowerCase()) ||
@@ -178,6 +183,7 @@ function MakelaarView() {
         </Typography>
       </Box>
 
+      {/* toont leeg-bericht als er na filtering geen woningen overblijven */}
       {filtered.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 12, bgcolor: 'white', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
           <HomeWorkIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
@@ -196,6 +202,7 @@ function MakelaarView() {
   );
 }
 
+// toont de bieder-weergave voor bieders, anders de makelaar/admin-weergave
 export default function WoningOverzicht() {
   const { user } = useAppContext();
   return user?.role === 'bidder' ? <BidderView /> : <MakelaarView />;

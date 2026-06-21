@@ -21,6 +21,7 @@ const GRADIENTS = [
   'linear-gradient(135deg, #B71C1C 0%, #EF5350 100%)',
 ];
 
+// toont resterende tijd tot deadline als badge, kleurt rood bij urgentie of gesloten status
 function CountdownBadge({ deadline }: { deadline: string }) {
   const { label, expired, urgent } = useCountdown(deadline);
 
@@ -51,6 +52,7 @@ function CountdownBadge({ deadline }: { deadline: string }) {
 
 export default function PropertyCard({ property, auction }: Props) {
   const navigate = useNavigate();
+  // bepaalt een consistente achtergrondkleur per woning op basis van het id
   const gradient = GRADIENTS[(property.id - 1) % GRADIENTS.length];
   const isOpen = auction?.status === 'open';
 

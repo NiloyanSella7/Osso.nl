@@ -40,6 +40,7 @@ export default function BlockchainMonitor() {
   const [selectedProperty, setSelectedProperty] = useState<string>('all');
   const prevIds = useRef<Set<number>>(new Set());
 
+  // Haalt de blockchain feed op en bepaalt welke entries nieuw zijn t.o.v. de vorige fetch
   const fetchFeed = async () => {
     try {
       const data = await api.getBlockchainFeed(100);
@@ -57,8 +58,10 @@ export default function BlockchainMonitor() {
     }
   };
 
+  // Eerste keer feed laden bij mount
   useEffect(() => { fetchFeed(); }, []);
 
+  // Pollt de feed elke 5 seconden voor live updates
   useEffect(() => {
     const timer = setInterval(() => {
       fetchFeed();
@@ -67,6 +70,7 @@ export default function BlockchainMonitor() {
     return () => clearInterval(timer);
   }, []);
 
+  // Verwijdert de "nieuw"-markering van entries na 3 seconden
   useEffect(() => {
     if (newIds.size === 0) return;
     const t = setTimeout(() => setNewIds(new Set()), 3000);
@@ -94,6 +98,7 @@ export default function BlockchainMonitor() {
     return acc;
   }, {});
 
+  // Telt het aantal unieke wallets en actieve veilingen in de gefilterde set
   const uniqueWallets = [...new Set(filtered.map((e) => e.bidder_wallet))].length;
   const activeAuctions = [...new Set(filtered.map((e) => e.auction_id))].length;
 

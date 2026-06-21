@@ -31,6 +31,7 @@ export default function Onboarding() {
   const [idinState, setIdinState] = useState<'idle' | 'loading' | 'done'>('idle');
   const [error, setError] = useState('');
 
+  // valideert dat de naam is ingevuld, slaat profiel op en gaat naar de volgende stap
   const handleProfileNext = async () => {
     if (!fullName.trim()) { setNameError(true); return; }
     setNameError(false);
@@ -42,6 +43,7 @@ export default function Onboarding() {
     setStep(1);
   };
 
+  // simuleert de iDIN-identiteitsverificatie flow via de bank
   const handleIdin = async () => {
     setIdinState('loading');
     setError('');
@@ -69,6 +71,7 @@ export default function Onboarding() {
     }
   };
 
+  // sluit onboarding af en stuurt gebruiker naar de homepage
   const handleFinish = () => navigate('/');
 
   return (
@@ -88,7 +91,7 @@ export default function Onboarding() {
             <Step completed={step > 2}><StepLabel>Klaar</StepLabel></Step>
           </Stepper>
 
-          {/* Step 0: Profiel */}
+          {/* Step 0: Profiel - toont alleen als stap 0 actief is */}
           {step === 0 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -124,7 +127,7 @@ export default function Onboarding() {
             </Box>
           )}
 
-          {/* Step 1: iDIN */}
+          {/* Step 1: iDIN - toont alleen als stap 1 actief is */}
           {step === 1 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -137,6 +140,7 @@ export default function Onboarding() {
 
               {error && <Alert severity="error">{error}</Alert>}
 
+              {/* toont resultaat van iDIN-verificatie of het keuzeformulier, afhankelijk van de status */}
               {idinState === 'done' ? (
                 <Alert severity="success" icon={<CheckCircleIcon />}>
                   <Typography sx={{ fontWeight: 600 }}>iDIN-verificatie geslaagd!</Typography>
@@ -196,7 +200,7 @@ export default function Onboarding() {
             </Box>
           )}
 
-          {/* Step 2: Done */}
+          {/* Step 2: Done - toont alleen als stap 2 actief is */}
           {step === 2 && (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Box sx={{ width: 80, height: 80, borderRadius: '50%', bgcolor: 'success.light', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3 }}>

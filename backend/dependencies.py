@@ -13,6 +13,7 @@ from models import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
+# Genereert een JWT-token met vervaldatum op basis van de meegegeven payload
 def create_access_token(data: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
@@ -22,6 +23,7 @@ def create_access_token(data: dict) -> str:
     )
 
 
+# Decodeert het JWT-token uit de request en haalt de bijbehorende gebruiker uit de database
 def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: Annotated[Session, Depends(get_db)],
@@ -47,6 +49,7 @@ def get_current_user(
     return user
 
 
+# Geeft een dependency die toegang weigert als de gebruiker niet een van de gegeven rollen heeft
 def require_role(*roles: str):
     def checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
         if current_user.role not in roles:

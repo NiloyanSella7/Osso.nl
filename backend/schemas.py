@@ -6,16 +6,19 @@ from pydantic import BaseModel, EmailStr, field_validator
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
 
+# Inloggegevens voor authenticatie
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
 
+# JWT-token die na succesvolle login wordt teruggegeven
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 
+# Gegevens voor het registreren van een nieuwe gebruiker
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
@@ -27,9 +30,11 @@ class RegisterRequest(BaseModel):
 # ── iDIN ─────────────────────────────────────────────────────────────────────
 
 
+# Verzoek om de iDIN-verificatie te starten met een gekoppeld wallet-adres
 class IdinStartRequest(BaseModel):
     wallet_address: str
 
+    # Controleert of het wallet-adres een geldig Ethereum-formaat heeft
     @field_validator("wallet_address")
     @classmethod
     def validate_wallet(cls, v: str) -> str:
@@ -38,6 +43,7 @@ class IdinStartRequest(BaseModel):
         return v.lower()
 
 
+# Callback-gegevens die na iDIN-verificatie worden ontvangen
 class IdinCallbackRequest(BaseModel):
     idin_identifier: str
     wallet_address: str
@@ -47,6 +53,7 @@ class IdinCallbackRequest(BaseModel):
 # ── User ─────────────────────────────────────────────────────────────────────
 
 
+# Volledige gebruikersgegevens zoals teruggegeven door de API
 class UserOut(BaseModel):
     id: int
     email: str
@@ -62,11 +69,13 @@ class UserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# Velden die een gebruiker zelf mag bijwerken
 class UserUpdate(BaseModel):
     full_name: str | None = None
     wallet_address: str | None = None
 
 
+# Gegevens voor het uitnodigen van een nieuwe gebruiker (bv. bieder)
 class InviteRequest(BaseModel):
     email: EmailStr
     full_name: str
@@ -76,6 +85,7 @@ class InviteRequest(BaseModel):
 # ── Makelaar ──────────────────────────────────────────────────────────────────
 
 
+# Gegevens van een makelaar zoals teruggegeven door de API
 class MakelaarOut(BaseModel):
     id: int
     company_name: str
@@ -91,6 +101,7 @@ class MakelaarOut(BaseModel):
 # ── Property ─────────────────────────────────────────────────────────────────
 
 
+# Gegevens voor het aanmaken van een nieuwe woning
 class PropertyCreate(BaseModel):
     address: str
     postal_code: str | None = None
@@ -103,6 +114,7 @@ class PropertyCreate(BaseModel):
     images: list[str] = []
 
 
+# Volledige woninggegevens zoals teruggegeven door de API
 class PropertyOut(BaseModel):
     id: int
     seller_id: int
@@ -122,6 +134,7 @@ class PropertyOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# Velden die bij het bijwerken van een woning gewijzigd mogen worden
 class PropertyUpdate(BaseModel):
     address: str | None = None
     postal_code: str | None = None
@@ -137,12 +150,14 @@ class PropertyUpdate(BaseModel):
 # ── Auction ──────────────────────────────────────────────────────────────────
 
 
+# Gegevens voor het aanmaken van een nieuwe veiling
 class AuctionCreate(BaseModel):
     property_id: int
     start_date: datetime
     deadline: datetime
 
 
+# Volledige veilinggegevens zoals teruggegeven door de API
 class AuctionOut(BaseModel):
     id: int
     property_id: int
@@ -157,6 +172,7 @@ class AuctionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# Beknopte status van een veiling, bv. voor polling door de frontend
 class AuctionStatus(BaseModel):
     id: int
     status: str
@@ -178,6 +194,7 @@ class BidCreate(BaseModel):
     financing_condition: bool = False
 
 
+# Volledige bodgegevens zoals teruggegeven door de API
 class BidOut(BaseModel):
     id: int
     auction_id: int
@@ -199,6 +216,7 @@ class BidOut(BaseModel):
 # ── Blockchain verify ─────────────────────────────────────────────────────────
 
 
+# Eén bod zoals rechtstreeks van de blockchain gelezen
 class BlockchainBid(BaseModel):
     bidder_wallet: str
     amount_usdc: float
@@ -206,6 +224,7 @@ class BlockchainBid(BaseModel):
     tx_hash: str
 
 
+# Vergelijking tussen on-chain biedingen en geïndexeerde biedingen in de database
 class VerifyResponse(BaseModel):
     on_chain_bids: list[BlockchainBid]
     indexed_bids: list[BidOut]
@@ -215,6 +234,7 @@ class VerifyResponse(BaseModel):
 # ── Blockchain feed ───────────────────────────────────────────────────────────
 
 
+# Eén regel in de live blockchain-feed voor het dashboard
 class BlockchainEntry(BaseModel):
     id: int
     tx_hash: str

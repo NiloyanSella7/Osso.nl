@@ -15,6 +15,7 @@ import BlockchainMonitor from './pages/BlockchainMonitor';
 import KafkaMonitor from './pages/KafkaMonitor';
 import type { ReactNode } from 'react';
 
+// blokkeert toegang tot children en stuurt naar login als gebruiker niet is ingelogd
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isLoggedIn, loading } = useAppContext();
   if (loading) return <Spinner />;
@@ -22,6 +23,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// vereist login én afgeronde onboarding voordat children getoond worden
 function RequireOnboarded({ children }: { children: ReactNode }) {
   const { isLoggedIn, isOnboarded, loading } = useAppContext();
   if (loading) return <Spinner />;
@@ -30,6 +32,7 @@ function RequireOnboarded({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// beperkt route tot gebruikers met rol makelaar, admin of seller
 function RequireMakelaar({ children }: { children: ReactNode }) {
   const { user, loading } = useAppContext();
   if (loading) return <Spinner />;
@@ -39,6 +42,7 @@ function RequireMakelaar({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// beperkt route uitsluitend tot gebruikers met rol admin
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { user, loading } = useAppContext();
   if (loading) return <Spinner />;
@@ -54,6 +58,7 @@ function Spinner() {
   );
 }
 
+// definieert alle routes van de app, inclusief beveiligde routes per rol
 function AppRoutes() {
   return (
     <Routes>
@@ -90,6 +95,7 @@ function AppRoutes() {
   );
 }
 
+// hoofdcomponent: zet theme, context provider en router op rond de routes
 export default function App() {
   return (
     <ThemeProvider theme={theme}>

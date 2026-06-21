@@ -6,11 +6,13 @@ function getToken(): string | null {
   return localStorage.getItem('osso_token');
 }
 
+// voegt Authorization-header toe als er een token is opgeslagen
 function authHeaders(): HeadersInit {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// generieke API-helper: voegt auth-header toe, stuurt naar login bij 401, gooit fout bij niet-ok response
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
@@ -38,6 +40,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+// logt in en slaat het ontvangen JWT-token op in localStorage
 export async function login(email: string, password: string): Promise<string> {
   const body = new URLSearchParams({ username: email, password });
   const res = await fetch(`${BASE}/auth/login`, {
@@ -66,10 +69,12 @@ export async function register(
   });
 }
 
+// verwijdert het opgeslagen token
 export function logout(): void {
   localStorage.removeItem('osso_token');
 }
 
+// controleert of er een geldig token aanwezig is
 export function isLoggedIn(): boolean {
   return !!getToken();
 }
@@ -202,6 +207,7 @@ export interface BlockchainEntry {
   indexed_at: string;
 }
 
+// haalt de meest recente blockchain-events op, gelimiteerd tot het opgegeven aantal
 export async function getBlockchainFeed(limit = 100): Promise<BlockchainEntry[]> {
   return request(`/blockchain/feed?limit=${limit}`);
 }

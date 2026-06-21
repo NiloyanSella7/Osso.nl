@@ -65,6 +65,7 @@ export default function KafkaMonitor() {
   const [filter, setFilter] = useState<string>('all');
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Zet een WebSocket-verbinding op naar de Kafka-feed en herverbindt automatisch bij verbreking
   useEffect(() => {
     const token = localStorage.getItem('osso_token');
     if (!token) { setError('Niet ingelogd'); return; }
@@ -94,8 +95,10 @@ export default function KafkaMonitor() {
   }, []);
 
   const topics = Object.keys(TOPIC_META);
+  // Filtert berichten op gekozen topic, of toont alles
   const filtered = filter === 'all' ? messages : messages.filter((m) => m.topic === filter);
 
+  // Telt het aantal berichten per topic voor de stats en filterchips
   const countByTopic = topics.reduce<Record<string, number>>((acc, t) => {
     acc[t] = messages.filter((m) => m.topic === t).length;
     return acc;
@@ -230,6 +233,7 @@ export default function KafkaMonitor() {
                 {filtered.map((msg) => {
                   const meta = TOPIC_META[msg.topic];
                   const d = msg.data;
+                  // Bericht is een foutmelding als status 'failed' is of een error-veld bevat
                   const isError = d.status === 'failed' || 'error' in d;
                   const isConfirmed = msg.topic === 'blockchain.bid.confirmed' && !isError;
 
@@ -289,6 +293,7 @@ export default function KafkaMonitor() {
                       </TableCell>
 
                       {/* Tx Hash / Status */}
+                      {/* Toont status op basis van bericht type: fout, bevestigd, wachtend, of ruwe data */}
                       <TableCell sx={{ py: 1.5 }}>
                         {isError ? (
                           <Typography sx={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#ef5350' }}>
