@@ -34,14 +34,32 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
         .all()
     )
 
-    deadline_passed = datetime.now() > auction.deadline
+    # De biedperiode is voorbij zodra de deadline verstreken is óf de veiling niet
+    # meer 'open' staat. Dit volgt exact dezelfde logica als de frontend (isClosed),
+    # zodat de bedragen onthuld worden zodra de frontend de biedtabel toont — ook als
+    # een makelaar de veiling handmatig vóór de deadline heeft gesloten.
+    deadline = auction.deadline
+    if deadline.tzinfo is not None:
+        # Normaliseer een tz-bewuste deadline naar naïeve lokale tijd, zodat de
+        # vergelijking met datetime.now() niet faalt of een uren-offset oplevert.
+        deadline = deadline.replace(tzinfo=None)
+    period_over = auction.status != "open" or datetime.now() > deadline
 
-    # na de deadline mogen de echte bedragen van de blockchain opgehaald worden
-    if deadline_passed and indexed:
+    # na de biedperiode mogen de echte bedragen van de blockchain opgehaald worden
+    if period_over and indexed:
         try:
             from blockchain.client import blockchain_client
 
             chain_bids = blockchain_client.get_registry_bids(auction_id)
+            if not chain_bids:
+                # Geen fout, maar wél leeg: registry niet geladen of node onbereikbaar.
+                # Log expliciet zodat een lege biedtabel diagnostiseerbaar is.
+                logger.warning(
+                    "Reveal biedbedragen: blockchain gaf geen biedingen terug voor "
+                    "auction_id=%s — bedragen blijven verborgen. Controleer of de "
+                    "blockchain-node draait en OSSO_REGISTRY_ADDRESS klopt.",
+                    auction_id,
+                )
             amount_by_wallet = {
                 b["bidder_wallet"].lower(): b["amount_eur"] for b in chain_bids
             }
@@ -49,8 +67,21 @@ def list_bids(auction_id: int, db: Annotated[Session, Depends(get_db)]):
                 wallet = (bid.bidder_wallet or "").lower()
                 if wallet in amount_by_wallet:
                     bid.amount_usdc = amount_by_wallet[wallet]
+                else:
+                    logger.warning(
+                        "Reveal biedbedragen: geen on-chain bedrag gevonden voor "
+                        "wallet=%s in auction_id=%s — dit bod blijft zonder bedrag.",
+                        wallet,
+                        auction_id,
+                    )
         except Exception:
-            pass
+            # Niet langer stil wegslikken: log de volledige stacktrace zodat een
+            # mislukte reveal (RPC-fout, verkeerd ABI, e.d.) zichtbaar is in de logs.
+            logger.exception(
+                "Reveal biedbedragen mislukt voor auction_id=%s — bedragen blijven "
+                "verborgen.",
+                auction_id,
+            )
 
     return list(reversed(indexed))
 
